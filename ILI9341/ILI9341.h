@@ -16,9 +16,33 @@
 #define		TFT_HEIGHT	240
 
 #define 	USE_TFT_CS	1
-#define 	USE_TFT_RST	1
+#define		USE_HARD_SPI
 
-// definicje pinow
+#ifdef		USE_HARD_SPI
+// definicje pinow (hard SPI)
+#define		TFT_SCK		(1<<5)												// CLK
+#define 	TFT_MISO	(1<<4)												// MISO
+#define 	TFT_MOSI	(1<<3)												// MOSI
+#define 	TFT_RST		(1<<2)												// TFT_RST
+#define 	TFT_DC		(1<<0)												// D/C
+#define 	TFT_CS		(1<<1)												// CS
+
+// definicje portow
+#define 	TFT_SCK_PORT	PORTB
+#define 	TFT_SCK_DIR		DDRB
+#define 	TFT_MOSI_PORT	PORTB
+#define 	TFT_MOSI_DIR	DDRB
+#define 	TFT_RST_PORT	PORTB
+#define 	TFT_RST_DIR		DDRB
+#define 	TFT_DC_PORT		PORTB
+#define 	TFT_DC_DIR		DDRB
+#define 	TFT_CS_PORT		PORTB
+#define 	TFT_CS_DIR		DDRB
+#define 	TFT_MISO_PORT	PORTB
+#define 	TFT_MISO_DIR	DDRB
+
+#else
+// definicje pinow (soft SPI)
 #define		TFT_SCK		(1<<5)												// CLK
 #define 	TFT_MOSI	(1<<4)												// MOSI
 #define 	TFT_RST		(1<<3)												// TFT_RST
@@ -39,6 +63,7 @@
 #define 	TFT_CS_DIR		DDRB
 #define 	TFT_MISO_PORT	PORTB
 #define 	TFT_MISO_DIR	DDRB
+#endif
 
 // definicje makr
 #define 	TFT_SCK_LO	TFT_SCK_PORT &= ~TFT_SCK

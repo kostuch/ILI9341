@@ -10,9 +10,11 @@
 #include "ILI9341.h"
 #include "colors.h"
 #include "fonts5x7.h"
+#include "font8x8.h"
 #include "font16x16.h"
 #include "bmp_mono.h"
 #include "bmp_color.h"
+#include "touch.h"
 
 int main(void)
 {
@@ -88,6 +90,8 @@ int main(void)
 	//ILI9341_draw_fast_rect(0, 0, 320, 240, true, BLUE);						// Szybki wypelniony prostokat (CLS)
 	//ILI9341_draw_fast_rect(10, 20, 40, 50, true, YELLOW);					// Szybki wypelniony prostokat
 	
+	ILI9341_cls(BLUE);														// Ekran na niebiesko
+	ILI9341_set_font((font_t) {font8x8, 8, 8, YELLOW, TRANSPARENT});		// font 8x8 transparentny
 	while (1)
     {
     }

@@ -39,7 +39,7 @@ void ILI9341_deselect()
     TFT_CS_HI;
 }
 
-/* Init pins for soft SPI */
+/* Init pins for SPI */
 static void ILI9341_initSPI()
 {
     TFT_MOSI_DIR |= TFT_MOSI;												// TFT_MOSI pin as output
@@ -47,28 +47,47 @@ static void ILI9341_initSPI()
     TFT_DC_DIR |= TFT_DC;													// TFT_DC pin as output
     TFT_MOSI_PORT |= TFT_MOSI;												// Hi state
     TFT_SCK_PORT |= TFT_SCK;
-#if USE_TFT_CS == 1															// If TFT_CS in use
+    #if USE_TFT_CS == 1															// If TFT_CS in use
     TFT_CS_DIR |= TFT_CS;
     TFT_CS_PORT |= TFT_CS;
-#endif
-#if USE_TFT_RST == 1
+    #endif
     TFT_RST_DIR |= TFT_RST;													// TFT_RST pin as output
     TFT_RST_PORT |= TFT_RST;												// Hi state
+
+#ifdef USE_HARD_SPI
+    PRR &= ~(1 << PRSPI);													// Enable SPI in Power Reduction Register
+	SPCR = ((1 << SPE) |													// SPI Enable
+    (0 << SPIE) |															// SPI Interupt Enable
+    (0 << DORD) |															// Data Order (0:MSB first / 1:LSB first)
+    (1 << MSTR) |															// Master/Slave select
+    (0 << SPR1) | (0 << SPR0) |												// SPI Clock Rate F_CPU/4
+    (0 << CPOL) |															// Clock Polarity (0:SCK low / 1:SCK hi when idle)
+    (0 << CPHA));															// Clock Phase (0:leading / 1:trailing edge sampling)
+    SPSR = (1 << SPI2X);													// Double Clock Rate F_CPU/2
+
+#else
 #endif
 }
 
 /* Bitbang byte via SPI */
 static void SPI_write(uint8_t data)
 {
-    for (uint8_t i = 0x80; i; i >>= 1)										// 8 bits (from MSB)
-    {
-        TFT_SCK_LO;															// Clock LOW
+    #ifdef USE_HARD_SPI
+	/* Start transmission */
+	SPDR = data;
+	/* Wait for transmission complete */
+	while(!(SPSR & (1<<SPIF))) ;
+#else
+	for (uint8_t i = 0x80; i; i >>= 1)										// 8 bits (from MSB)
+	{
+		TFT_SCK_LO;															// Clock LOW
 
-        if (data & i) TFT_MOSI_HI;											// If bit=1, set line
-        else TFT_MOSI_LO;													// If bit=0, reset line
+		if (data & i) TFT_MOSI_HI;											// If bit=1, set line
+		else TFT_MOSI_LO;													// If bit=0, reset line
 
-        TFT_SCK_HI;															// Clock HIGH
-    }
+		TFT_SCK_HI;															// Clock HIGH
+	}
+#endif
 }
 
 /* Write command */
@@ -101,20 +120,12 @@ static void ILI9341_wr_data(uint8_t data)
 void ILI9341_init()
 {
     ILI9341_initSPI();
-#if USE_TFT_RST == 1
     TFT_RST_HI;
     _delay_ms(50);
     TFT_RST_LO;
     _delay_ms(50);
     TFT_RST_HI;
     _delay_ms(50);
-#else
-    TFT_CS_HI;
-    _delay_ms(25);
-    TFT_CS_LO;
-    _delay_ms(25);
-    TFT_CS_HI;
-#endif
     ILI9341_wr_cmd(ILI9341_POWER_CONTROL_A);								// ??? bez tego nie dziala
     ILI9341_wr_data(0x39);
     ILI9341_wr_data(0x2C);
