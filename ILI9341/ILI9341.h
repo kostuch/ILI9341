@@ -12,9 +12,6 @@
 #ifndef ILI9341_H_
 #define ILI9341_H_
 
-//#define SET_GAMMA
-//#define SET_WINDOW
-
 #define		TFT_WIDTH	320
 #define		TFT_HEIGHT	240
 
@@ -61,6 +58,14 @@ enum position_t {PORTRAIT = 0, LANDSCAPE = 1, PORTRAIT_REV = 2, LANDSCAPE_REV = 
 
 typedef struct
 {
+	uint16_t width;
+	uint16_t height;
+	uint8_t inversion;
+	uint8_t idle;
+} tft_t;
+
+typedef struct
+{
     uint16_t touch_x;
     uint16_t touch_y;
     uint16_t touch_z;
@@ -76,37 +81,36 @@ typedef struct
 } font_t;
 
 uint8_t rotation;
-uint16_t lcd_width;
-uint16_t lcd_height;
-uint16_t draw_color;
 font_t current_font;
+tft_t tft_state;
 
 // Functions
 void ILI9341_on(void);
 void ILI9341_off(void);
 void ILI9341_init(void);
 void ILI9341_reset(void);
-uint16_t ILI9341_rd_reg(uint8_t addr);
-void ILI9341_wr_reg(uint8_t addr, uint16_t data);
+void ILI9341_select(void);
+void ILI9341_deselect(void);
+//uint16_t ILI9341_rd_reg(uint8_t addr);
+//void ILI9341_wr_reg(uint8_t addr, uint16_t data);
 uint16_t rgb_color565(uint8_t r, uint8_t g, uint8_t b);
 uint8_t rgb_color8(uint8_t r, uint8_t g, uint8_t b);
-void ILI9341_set_ram_addr(uint16_t x, uint16_t y);
-void ILI9341_wr_ram(uint16_t data);
+//void ILI9341_set_ram_addr(uint16_t x, uint16_t y);
+//void ILI9341_wr_ram(uint16_t data);
 uint16_t ILI9341_rd_ram(void);
 void ILI9341_set_8colors(void);
 void ILI9341_set_64kcolors(void);
 void ILI9341_negative(void);
 void ILI9341_scroll(uint16_t shift);
 void ILI9341_set_rotation(uint8_t orientation);
-void ILI9341_set_address(uint16_t x, uint16_t y);
-void ILI9341_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
 void ILI9341_set_xy(uint16_t x, uint16_t y);
+void ILI9341_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
 void ILI9341_set_font(font_t font);
-void ILI9341_set_draw_color(uint16_t draw_color);
 void ILI9341_cls(uint16_t color);
 void ILI9341_draw_pixel(uint16_t x, uint16_t y, uint16_t color);
 void ILI9341_draw_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
 void ILI9341_draw_fast_line(uint16_t x, uint16_t y, uint16_t lenght, uint16_t color, enum direction_t line_direction);
+void ILI9341_draw_fast_rect(uint16_t x0, uint16_t y0, uint16_t width, uint16_t height, bool fill, uint16_t color);
 void ILI9341_draw_polygon(uint16_t nodes[], uint8_t count, uint16_t color, uint8_t close);
 void ILI9341_draw_triangle(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);
 void ILI9341_draw_rectangle(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
@@ -114,8 +118,6 @@ void ILI9341_draw_circle(uint16_t x, uint16_t y, uint8_t radius, bool fill, uint
 void ILI9341_draw_mono_bmp(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap, uint16_t fg, uint16_t bg);
 void ILI9341_draw_mono_trans_bmp(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t *bitmap, uint16_t color);
 void ILI9341_draw_color_bmp(uint16_t x, uint16_t y, uint16_t height, uint16_t width, const uint16_t *bitmap);
-//void ILI9341_draw_char(uint16_t x, uint16_t y, char c);
-//void ILI9341_draw_string(uint16_t x, uint16_t y, char *string);
 void ILI9341_chr(uint16_t x, uint16_t y, char c);
 void ILI9341_txt(uint16_t x, uint16_t y, char *string);
 

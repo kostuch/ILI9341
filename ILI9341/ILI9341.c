@@ -74,9 +74,6 @@ static void SPI_write(uint8_t data)
 /* Write command */
 static void ILI9341_wr_cmd(uint8_t command)
 {
-#if USE_TFT_CS == 1															// If TFT_CS in use
-    TFT_CS_HI;
-#endif
     TFT_DC_LO;																// TFT_DC LOW - command
 #if USE_TFT_CS == 1															// If TFT_CS in use
     TFT_CS_LO;
@@ -90,9 +87,6 @@ static void ILI9341_wr_cmd(uint8_t command)
 /* Write data */
 static void ILI9341_wr_data(uint8_t data)
 {
-#if USE_TFT_CS == 1															// If TFT_CS in use
-    TFT_CS_HI;
-#endif
     TFT_DC_HI;																// TFT_DC HIGH - data
 #if USE_TFT_CS == 1															// If TFT_CS in use
     TFT_CS_LO;
@@ -176,7 +170,6 @@ uint16_t ILI9341_rd_ram()
  * 2 - down
  * 3 - left
  * */
-
 void ILI9341_set_rotation(uint8_t orientation)
 {
     rotation = orientation;
@@ -184,29 +177,29 @@ void ILI9341_set_rotation(uint8_t orientation)
     switch (orientation)
     {
         case PORTRAIT:														// up
-            lcd_width = TFT_HEIGHT;
-            lcd_height = TFT_WIDTH;
+            tft_state.width = TFT_HEIGHT;
+            tft_state.height = TFT_WIDTH;
             ILI9341_wr_cmd(ILI9341_MEMORY_ACCESS_CONTROL);
             ILI9341_wr_data(0x40 | 0x08);
             break;
 
         case LANDSCAPE:														// right
-            lcd_width = TFT_WIDTH;
-            lcd_height = TFT_HEIGHT;
+            tft_state.width = TFT_WIDTH;
+            tft_state.height = TFT_HEIGHT;
             ILI9341_wr_cmd(ILI9341_MEMORY_ACCESS_CONTROL);
             ILI9341_wr_data(0x20 | 0x08);
             break;
 
         case PORTRAIT_REV:													// down
-            lcd_width = TFT_HEIGHT;
-            lcd_height = TFT_WIDTH;
+            tft_state.width = TFT_HEIGHT;
+            tft_state.height = TFT_WIDTH;
             ILI9341_wr_cmd(ILI9341_MEMORY_ACCESS_CONTROL);
             ILI9341_wr_data(0x80 | 0x08);
             break;
 
         case LANDSCAPE_REV:													//  left
-            lcd_width = TFT_WIDTH;
-            lcd_height = TFT_HEIGHT;
+            tft_state.width = TFT_WIDTH;
+            tft_state.height = TFT_HEIGHT;
             ILI9341_wr_cmd(ILI9341_MEMORY_ACCESS_CONTROL);
             ILI9341_wr_data(0x40 | 0x80 | 0x20 | 0x08);
             break;
@@ -214,27 +207,27 @@ void ILI9341_set_rotation(uint8_t orientation)
 }
 
 /* Set current drawing coordinates */
-void ILI9341_set_address(uint16_t x, uint16_t y)
+void ILI9341_set_xy(uint16_t x, uint16_t y)
 {
-    if ((x > lcd_width) || (y > lcd_height)) return;						// Nothing if out of the screen
+    if ((x > tft_state.width) || (y > tft_state.height)) return;			// Nothing if out of the screen
 
     ILI9341_wr_cmd(ILI9341_COLUMN_ADDRESS_SET);
     ILI9341_wr_data(x >> 8);
     ILI9341_wr_data(x);
-    ILI9341_wr_data(lcd_width >> 8);
-    ILI9341_wr_data(lcd_width);
+    ILI9341_wr_data(tft_state.width >> 8);
+    ILI9341_wr_data(tft_state.width);
     ILI9341_wr_cmd(ILI9341_PAGE_ADDRESS_SET);
     ILI9341_wr_data(y >> 8);
     ILI9341_wr_data(y);
-    ILI9341_wr_data(lcd_height >> 8);
-    ILI9341_wr_data(lcd_height);
+    ILI9341_wr_data(tft_state.height >> 8);
+    ILI9341_wr_data(tft_state.height);
     ILI9341_wr_cmd(ILI9341_MEMORY_WRITE);
 }
 
 /* Set current drawing window */
 void ILI9341_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
 {
-    if ((x0 > lcd_width) || (y0 > lcd_height) || (x1 > lcd_width) || (y1 > lcd_height)) return;						// Nothing if out of the screen
+    if ((x0 > tft_state.width) || (y0 > tft_state.height) || (x1 > tft_state.width) || (y1 > tft_state.height)) return;	// Nothing if out of the screen
 
     ILI9341_wr_cmd(ILI9341_COLUMN_ADDRESS_SET);
     ILI9341_wr_data(x0 >> 8);
@@ -249,44 +242,42 @@ void ILI9341_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
     ILI9341_wr_cmd(ILI9341_MEMORY_WRITE);
 }
 
+/* Draw single pixel at given coordinates with a color */
 void ILI9341_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
 {
-    ILI9341_set_address(x, y);
+    ILI9341_set_xy(x, y);
     ILI9341_push_color(color);
 }
 
+/* Write color to LCD (at current coordinates) */
 static inline void ILI9341_push_color(uint16_t color)
 {
     ILI9341_wr_data(color >> 8);
     ILI9341_wr_data(color);
 }
+
 /* 8 colors on display */
-/*
 void ILI9341_set_8colors()
 {
-    ILI9341_wr_reg(ILI9341_DISP_CTRL1, 0x013B);
+    ILI9341_wr_cmd(ILI9341_IDLE_MODE_ON);
+    tft_state.idle = 1;
 }
-*/
 
 /* 64k colors on display */
-/*
 void ILI9341_set_64kcolors()
 {
-    ILI9341_wr_reg(ILI9341_DISP_CTRL1, 0x0133);
+    ILI9341_wr_cmd(ILI9341_IDLE_MODE_OFF);
+    tft_state.idle = 0;
 }
-*/
 
 /* Convert RGB to 8bit */
-/*
 uint8_t rgb_color8(uint8_t r, uint8_t g, uint8_t b)
 {
     uint16_t color8 = ((r * 7 / 255) << 5) + ((g * 7 / 255) << 2) + (b * 3 / 255);
     return color8;
 }
-*/
 
 /* Convert RGB to 16bit */
-/*
 uint16_t rgb_color565(uint8_t r, uint8_t g, uint8_t b)
 {
     uint16_t color;
@@ -297,7 +288,6 @@ uint16_t rgb_color565(uint8_t r, uint8_t g, uint8_t b)
     color |= b >> 3;														// rrrrrggg_gggbbbbb
     return color;
 }
-*/
 
 /* Draw character at given coordinates and color */
 void ILI9341_chr(uint16_t x, uint16_t y, char c)
@@ -357,22 +347,15 @@ void ILI9341_set_font(font_t font)
     current_font = font;
 }
 
-/* Set current draw color */
-void ILI9341_set_draw_color(uint16_t color)
-{
-    draw_color = color;
-}
-
 /* Fill screen with color */
 void ILI9341_cls(uint16_t color)
 {
-    ILI9341_set_window(0, 0, lcd_width - 1, lcd_height - 1);
+    ILI9341_set_window(0, 0, tft_state.width - 1, tft_state.height - 1);
     uint32_t i = 76800;									// 320x240=76800
 
     while (i--)
     {
-        ILI9341_wr_data(color >> 8);
-        ILI9341_wr_data(color);
+        ILI9341_push_color(color);
     }
 }
 
@@ -460,66 +443,68 @@ void ILI9341_draw_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint1
  * | VERTICAL
  * / UP_SLOPE
  * \ DN_SLOPE */
-/*
 void ILI9341_draw_fast_line(uint16_t x, uint16_t y, uint16_t lenght, uint16_t color, enum direction_t line_direction)
 {
-    if ((rotation == LANDSCAPE ) || (rotation == LANDSCAPE_REV))			// Landscape
+    switch (line_direction)
     {
-        ILI9341_wr_reg(ILI9341_GRAM_HOR_AD, y);								// Set beginning of line
-        ILI9341_wr_reg(ILI9341_GRAM_VER_AD, x);
-    }
-    else																	// Portrait
-    {
-        ILI9341_wr_reg(ILI9341_GRAM_HOR_AD, x);								// Set beginning of line
-        ILI9341_wr_reg(ILI9341_GRAM_VER_AD, y);
-    }
+        case HORIZONTAL:
+            ILI9341_set_window(x, y, x + lenght, y + 1);
 
-    for (uint16_t i = 0; i < lenght; i++)
-    {
-        switch (line_direction)
-        {
-            case HORIZONTAL:
-                break;
+            for (uint16_t i = 0; i < lenght; i++) ILI9341_push_color(color);
 
-            case VERTICAL:
-                if ((rotation == 0) || (rotation == 2))	ILI9341_wr_reg(ILI9341_GRAM_VER_AD, y + i);
-                else ILI9341_wr_reg(ILI9341_GRAM_HOR_AD, y + i);
+            break;
 
-                break;
+        case VERTICAL:
+            ILI9341_set_window(x, y, x, y + lenght);
 
-            case UP_SLOPE:
-                if ((rotation == PORTRAIT) || (rotation == PORTRAIT_REV))
-                {
-                    ILI9341_wr_reg(ILI9341_GRAM_HOR_AD, x + i);
-                    ILI9341_wr_reg(ILI9341_GRAM_VER_AD, y - i);
-                }
-                else
-                {
-                    ILI9341_wr_reg(ILI9341_GRAM_HOR_AD, y - i);
-                    ILI9341_wr_reg(ILI9341_GRAM_VER_AD, x + i);
-                }
+            for (uint16_t i = 0; i < lenght; i++) ILI9341_push_color(color);
 
-                break;
+            break;
 
-            case DN_SLOPE:
-                if ((rotation == PORTRAIT) || (rotation == PORTRAIT_REV))
-                {
-                    ILI9341_wr_reg(ILI9341_GRAM_HOR_AD, x + i);
-                    ILI9341_wr_reg(ILI9341_GRAM_VER_AD, y + i);
-                }
-                else
-                {
-                    ILI9341_wr_reg(ILI9341_GRAM_HOR_AD, y + i);
-                    ILI9341_wr_reg(ILI9341_GRAM_VER_AD, x + i);
-                }
+        case UP_SLOPE:
+            ILI9341_set_window(x, y - lenght, x + lenght, y);
 
-                break;
-        }
+            for (uint16_t i = 0; i < lenght; i++)
+            {
+                ILI9341_set_xy(x + i, y - i);
+                ILI9341_push_color(color);
+            }
 
-        ILI9341_wr_reg(ILI9341_RW_GRAM, color);								// Point on line
+            break;
+
+        case DN_SLOPE:
+            ILI9341_set_window(x, y, x + lenght, y + lenght);
+
+            for (uint16_t i = 0; i < lenght; i++)
+            {
+                ILI9341_set_xy(x + i, y + i);
+                ILI9341_push_color(color);
+            }
+
+            break;
     }
 }
-*/
+
+void ILI9341_draw_fast_rect(uint16_t x, uint16_t y, uint16_t width, uint16_t height, bool fill, uint16_t color)
+{
+    if (fill)
+    {
+        ILI9341_set_window(x, y, x + width - 1, y + height - 1);
+        uint32_t i = (uint32_t) width * (uint32_t)height;
+
+        while (i--)
+        {
+            ILI9341_push_color(color);
+        }
+    }
+    else
+    {
+        ILI9341_draw_fast_line(x, y, width, color, HORIZONTAL);
+        ILI9341_draw_fast_line(x, y + height - 1, width, color, HORIZONTAL);
+        ILI9341_draw_fast_line(x, y, height, color, VERTICAL);
+        ILI9341_draw_fast_line(x + width, y, height, color, VERTICAL);
+    }
+}
 
 /* Draw polygon on the display
  * nodes[]: table of nodes
@@ -660,17 +645,16 @@ void ILI9341_draw_color_bmp(uint16_t x, uint16_t y, uint16_t height, uint16_t wi
 }
 
 /* Reverse all colors on the display */
-/*
 void ILI9341_negative()
 {
-    ILI9341_wr_reg(ILI9341_GATE_SCAN_CTRL2, ILI9341_rd_reg(ILI9341_GATE_SCAN_CTRL2) ^ 1);
+    if (tft_state.inversion == 0)
+    {
+        ILI9341_wr_cmd(ILI9341_DISP_INVERSION_ON);
+        tft_state.inversion = 1;
+    }
+    else
+    {
+        ILI9341_wr_cmd(ILI9341_DISP_INVERSION_OFF);
+        tft_state.inversion = 0;
+    }
 }
-*/
-
-/* Hardware roll screen vertical (portrait) or horizontal (landscape) */
-/*
-void ILI9341_scroll(uint16_t shift)
-{
-    ILI9341_wr_reg(ILI9341_GATE_SCAN_CTRL3, shift);
-}
-*/
