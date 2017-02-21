@@ -14,6 +14,9 @@
 #include "ILI9341.h"
 #include "colors.h"
 
+static uint8_t SPI_rxtx(uint8_t tx);
+static uint8_t ILI9341_rd_cmd(uint8_t addr, uint8_t parameter);
+static void SPI_write(uint8_t data);
 static void ILI9341_wr_cmd(uint8_t cmd);
 static void ILI9341_wr_data(uint8_t data);
 static inline void ILI9341_push_color(uint16_t color);
@@ -47,46 +50,49 @@ static void ILI9341_initSPI()
     TFT_DC_DIR |= TFT_DC;													// TFT_DC pin as output
     TFT_MOSI_PORT |= TFT_MOSI;												// Hi state
     TFT_SCK_PORT |= TFT_SCK;
-    #if USE_TFT_CS == 1															// If TFT_CS in use
+	TFT_MISO_DIR &= ~TFT_MISO;												// TFT MISO pin as input
+	TFT_MISO_PORT |= TFT_MISO;												// Pullup
+
+#if USE_TFT_CS == 1															// If TFT_CS in use
     TFT_CS_DIR |= TFT_CS;
     TFT_CS_PORT |= TFT_CS;
-    #endif
+#endif
     TFT_RST_DIR |= TFT_RST;													// TFT_RST pin as output
     TFT_RST_PORT |= TFT_RST;												// Hi state
-
-#ifdef USE_HARD_SPI
+#ifdef TFT_HARD_SPI
     PRR &= ~(1 << PRSPI);													// Enable SPI in Power Reduction Register
-	SPCR = ((1 << SPE) |													// SPI Enable
-    (0 << SPIE) |															// SPI Interupt Enable
-    (0 << DORD) |															// Data Order (0:MSB first / 1:LSB first)
-    (1 << MSTR) |															// Master/Slave select
-    (0 << SPR1) | (0 << SPR0) |												// SPI Clock Rate F_CPU/4
-    (0 << CPOL) |															// Clock Polarity (0:SCK low / 1:SCK hi when idle)
-    (0 << CPHA));															// Clock Phase (0:leading / 1:trailing edge sampling)
+    SPCR = ((1 << SPE) |													// SPI Enable
+            (0 << SPIE) |															// SPI Interupt Enable
+            (0 << DORD) |															// Data Order (0:MSB first / 1:LSB first)
+            (1 << MSTR) |															// Master/Slave select
+            (0 << SPR1) | (0 << SPR0) |												// SPI Clock Rate F_CPU/4
+            (0 << CPOL) |															// Clock Polarity (0:SCK low / 1:SCK hi when idle)
+            (0 << CPHA));															// Clock Phase (0:leading / 1:trailing edge sampling)
     SPSR = (1 << SPI2X);													// Double Clock Rate F_CPU/2
-
 #else
 #endif
 }
 
 /* Bitbang byte via SPI */
-static void SPI_write(uint8_t data)
+static void SPI_write(uint8_t tx)
 {
-    #ifdef USE_HARD_SPI
-	/* Start transmission */
-	SPDR = data;
-	/* Wait for transmission complete */
-	while(!(SPSR & (1<<SPIF))) ;
+#ifdef TFT_HARD_SPI
+    SPDR = tx;
+
+    while (!(SPSR & (1 << SPIF)));											// Wait for transmission complete
+
 #else
-	for (uint8_t i = 0x80; i; i >>= 1)										// 8 bits (from MSB)
-	{
-		TFT_SCK_LO;															// Clock LOW
 
-		if (data & i) TFT_MOSI_HI;											// If bit=1, set line
-		else TFT_MOSI_LO;													// If bit=0, reset line
+    for (uint8_t i = 0x80; i; i >>= 1)										// 8 bits (from MSB)
+    {
+        TFT_SCK_LO;															// Clock LOW
 
-		TFT_SCK_HI;															// Clock HIGH
-	}
+        if (tx & i) TFT_MOSI_HI;											// If bit=1, set line
+        else TFT_MOSI_LO;													// If bit=0, reset line
+
+        TFT_SCK_HI;															// Clock HIGH
+    }
+
 #endif
 }
 
@@ -114,6 +120,49 @@ static void ILI9341_wr_data(uint8_t data)
 #if USE_TFT_CS == 1															// If TFT_CS in use
     TFT_CS_HI;
 #endif
+}
+
+/* Bitbang byte via SPI */
+static uint8_t SPI_rxtx(uint8_t tx)
+{
+    uint8_t rx = 0;
+#ifdef TFT_HARD_SPI
+    SPDR = tx;																// Dummy byte
+
+    while (!(SPSR & (1 << SPIF)));											// Wait for transmission complete
+
+    rx = SPDR;																// New value from slave
+#else
+	TFT_MOSI_HI;															// Dummy
+    for (uint8_t i = 0x80; i; i >>= 1)										// 8 bits (from MSB)
+    {
+        TFT_SCK_LO;															// Clock LOW
+		TFT_SCK_HI;															// Clock HIGH
+        rx <<= 1;															// Shift bit
+
+        if (TFT_MISO_PIN & TFT_MISO) rx |= 0x01;							// If MISO set, then set bit
+    }
+#endif
+    return rx;
+}
+
+/* Read command */
+static uint8_t ILI9341_rd_cmd(uint8_t addr, uint8_t parameter)
+{
+    TFT_DC_LO;																// TFT_DC LOW - command
+#if USE_TFT_CS == 1															// If TFT_CS in use
+    TFT_CS_LO;
+#endif
+    SPI_write(0xD9);														// Magic command
+    TFT_DC_HI;
+    SPI_write(0x10 + parameter);											// Magic data
+    TFT_DC_LO;
+    SPI_write(addr);
+    uint8_t data = SPI_rxtx(0);												// Send dummy byte and receive answer
+#if USE_TFT_CS == 1															// If TFT_CS in use
+    TFT_CS_HI;
+#endif
+    return data;
 }
 
 /* Initialisation */
@@ -155,12 +204,23 @@ void ILI9341_init()
     ILI9341_wr_data(0x00);
     ILI9341_wr_data(0x00);
     ILI9341_wr_cmd(ILI9341_COLMOD_PIXEL_FORMAT_SET);						// ok
-    ILI9341_wr_data(0x55);
+    ILI9341_wr_data(0x05);
     ILI9341_wr_cmd(ILI9341_FRAME_RATE_CONTROL_NORMAL);						// stabilniejszy obraz bez migotania
     ILI9341_wr_data(0x00);
     ILI9341_wr_data(0x10);
     ILI9341_wr_cmd(ILI9341_SLEEP_OUT);										// ok
     ILI9341_wr_cmd(ILI9341_DISPLAY_ON);										// ok
+}
+
+uint32_t ILI9341_rd_id(void)
+{
+	uint32_t data = 0;
+	for (uint8_t i = 0; i < 3; i++)
+	{
+		data <<= 8;
+		data |= ILI9341_rd_cmd(ILI9341_READ_ID4, i + 1);
+	}
+	return data;
 }
 
 /* Read raw data from RAM in LCD */

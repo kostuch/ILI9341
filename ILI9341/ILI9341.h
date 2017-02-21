@@ -16,16 +16,16 @@
 #define		TFT_HEIGHT	240
 
 #define 	USE_TFT_CS	1
-#define		USE_HARD_SPI
+#define		TFT_HARD_SPI
 
-#ifdef		USE_HARD_SPI
+#ifdef		TFT_HARD_SPI
 // definicje pinow (hard SPI)
 #define		TFT_SCK		(1<<5)												// CLK
 #define 	TFT_MISO	(1<<4)												// MISO
 #define 	TFT_MOSI	(1<<3)												// MOSI
 #define 	TFT_RST		(1<<2)												// TFT_RST
 #define 	TFT_DC		(1<<0)												// D/C
-#define 	TFT_CS		(1<<1)												// CS
+#define 	TFT_CS		(1<<7)												// CS
 
 // definicje portow
 #define 	TFT_SCK_PORT	PORTB
@@ -36,19 +36,19 @@
 #define 	TFT_RST_DIR		DDRB
 #define 	TFT_DC_PORT		PORTB
 #define 	TFT_DC_DIR		DDRB
-#define 	TFT_CS_PORT		PORTB
-#define 	TFT_CS_DIR		DDRB
+#define 	TFT_CS_PORT		PORTD
+#define 	TFT_CS_DIR		DDRD
 #define 	TFT_MISO_PORT	PORTB
 #define 	TFT_MISO_DIR	DDRB
 
 #else
 // definicje pinow (soft SPI)
 #define		TFT_SCK		(1<<5)												// CLK
-#define 	TFT_MOSI	(1<<4)												// MOSI
-#define 	TFT_RST		(1<<3)												// TFT_RST
-#define 	TFT_DC		(1<<2)												// D/C
-#define 	TFT_CS		(1<<1)												// CS
-#define 	TFT_MISO	(1<<0)												// MISO
+#define 	TFT_MISO	(1<<4)												// MISO
+#define 	TFT_MOSI	(1<<3)												// MOSI
+#define 	TFT_RST		(1<<2)												// TFT_RST
+#define 	TFT_DC		(1<<0)												// D/C
+#define 	TFT_CS		(1<<7)												// CS
 
 // definicje portow
 #define 	TFT_SCK_PORT	PORTB
@@ -59,9 +59,10 @@
 #define 	TFT_RST_DIR		DDRB
 #define 	TFT_DC_PORT		PORTB
 #define 	TFT_DC_DIR		DDRB
-#define 	TFT_CS_PORT		PORTB
-#define 	TFT_CS_DIR		DDRB
+#define 	TFT_CS_PORT		PORTD
+#define 	TFT_CS_DIR		DDRD
 #define 	TFT_MISO_PORT	PORTB
+#define 	TFT_MISO_PIN	PINB
 #define 	TFT_MISO_DIR	DDRB
 #endif
 
@@ -76,6 +77,7 @@
 #define 	TFT_DC_HI	TFT_DC_PORT |= TFT_DC
 #define 	TFT_CS_LO	TFT_CS_PORT &= ~TFT_CS
 #define 	TFT_CS_HI	TFT_CS_PORT |= TFT_CS
+#define		TFT_MISO_X	TFT_MISO_PIN & TFT_MISO
 
 // Types & Variables
 enum direction_t {HORIZONTAL, VERTICAL, UP_SLOPE, DN_SLOPE};
@@ -116,13 +118,11 @@ void ILI9341_init(void);
 void ILI9341_reset(void);
 void ILI9341_select(void);
 void ILI9341_deselect(void);
-//uint16_t ILI9341_rd_reg(uint8_t addr);
-//void ILI9341_wr_reg(uint8_t addr, uint16_t data);
 uint16_t rgb_color565(uint8_t r, uint8_t g, uint8_t b);
 uint8_t rgb_color8(uint8_t r, uint8_t g, uint8_t b);
-//void ILI9341_set_ram_addr(uint16_t x, uint16_t y);
-//void ILI9341_wr_ram(uint16_t data);
 uint16_t ILI9341_rd_ram(void);
+uint8_t ILI9341_rd_reg(uint8_t addr, uint8_t parameter);
+uint32_t ILI9341_rd_id(void);
 void ILI9341_set_8colors(void);
 void ILI9341_set_64kcolors(void);
 void ILI9341_negative(void);
