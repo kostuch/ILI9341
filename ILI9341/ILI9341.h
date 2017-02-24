@@ -16,16 +16,16 @@
 #define		TFT_HEIGHT	240
 
 #define 	USE_TFT_CS	1
-#define		TFT_HARD_SPI
+#define		USE_HARD_SPI
 
-#ifdef		TFT_HARD_SPI
+#ifdef		USE_HARD_SPI
 // definicje pinow (hard SPI)
 #define		TFT_SCK		(1<<5)												// CLK
 #define 	TFT_MISO	(1<<4)												// MISO
 #define 	TFT_MOSI	(1<<3)												// MOSI
 #define 	TFT_RST		(1<<2)												// TFT_RST
-#define 	TFT_DC		(1<<0)												// D/C
-#define 	TFT_CS		(1<<7)												// CS
+#define 	TFT_DC		(1<<1)												// D/C
+#define 	TFT_CS		(1<<0)												// CS
 
 // definicje portow
 #define 	TFT_SCK_PORT	PORTB
@@ -36,8 +36,8 @@
 #define 	TFT_RST_DIR		DDRB
 #define 	TFT_DC_PORT		PORTB
 #define 	TFT_DC_DIR		DDRB
-#define 	TFT_CS_PORT		PORTD
-#define 	TFT_CS_DIR		DDRD
+#define 	TFT_CS_PORT		PORTB
+#define 	TFT_CS_DIR		DDRB
 #define 	TFT_MISO_PORT	PORTB
 #define 	TFT_MISO_DIR	DDRB
 
@@ -93,13 +93,6 @@ typedef struct
 
 typedef struct
 {
-    uint16_t touch_x;
-    uint16_t touch_y;
-    uint16_t touch_z;
-} touch_t;
-
-typedef struct
-{
     const uint8_t *font;
     uint8_t x_size;
     uint8_t y_size;
@@ -112,8 +105,6 @@ font_t current_font;
 tft_t tft_state;
 
 // Functions
-void ILI9341_on(void);
-void ILI9341_off(void);
 void ILI9341_init(void);
 void ILI9341_reset(void);
 void ILI9341_select(void);

@@ -6,12 +6,15 @@
  */
 
 #include <avr/io.h>
+#include <util/delay.h>
 #include "touch.h"
 #include "ILI9341.h"
+#include "SPI.h"
 
-#define nop()  asm volatile("nop")
+static inline void XPT2046_activate(void);
+static inline void XPT2046_deactivate(void);
 
-void Touch_init(void)
+void XPT2046_init_io(void)
 {
     // This is already done in TFT section
     //TOUCH_MOSI_DIR |= TOUCH_MOSI;											// TFT_MOSI pin as output
@@ -26,132 +29,110 @@ void Touch_init(void)
     TOUCH_IRQ_PORT |= TOUCH_IRQ;											// Pullup
 };
 
-void touch_wr_cmd(uint8_t cmd)
+static inline void XPT2046_activate(void)
 {
-#ifdef TOUCH_HARD_SPI
-    SPDR = cmd;
-
-    while (!(SPSR & (1 << SPIF)));											// Wait for transmission complete
-
-#else
-
-    for (uint8_t i = 0x80; i; i >>= 1)										// 8 bits (from MSB)
-    {
-        TOUCH_SCK_LO;														// Clock LOW
-
-        if (cmd & i) TOUCH_MOSI_HI;										// If bit=1, set line
-        else TOUCH_MOSI_LO;													// If bit=0, reset line
-    }
-
+#if USE_TOUCH_CS == 1														// If TOUCH_CS in use
+    TOUCH_CS_LO;
 #endif
 }
 
-uint16_t touch_rd_data(void)
+static inline void XPT2046_deactivate(void)
 {
-#ifdef TOUCH_HARD_SPI
-    uint16_t position;
-    //position = SPI_rxtx(START_BIT | Z1_POS);								// Pressure 1
-    while (!(SPSR & (1 << SPIF))) ;											// Wait for reception complete
-
-	SPDR = (START_BIT | Z2_POS);											// Pressure 2
-    position = SPDR;														// First 7 bits
-    SPDR = 0xFF;															// Dummy byte
-    position <<= 7;
-
-    while (!(SPSR & (1 << SPIF))) ;											// Wait for reception complete
-
-    position |= SPDR;														// Remaining bits
-    return position;
-#else
-    uint16_t position = 0;
-
-    for (uint8_t count = 12; count; --count)
-    {
-        TOUCH_SCK_LO;																// Clock LOW
-        TOUCH_SCK_HI;																// Clock HIGH
-
-        if (TOUCH_MISO) position |= 1;
-
-        position <<= 1;
-    }
-
-    return position;
+#if USE_TOUCH_CS == 1														// If TOUCH_CS in use
+    TOUCH_CS_HI;
 #endif
 }
 
-void touch_read(uint16_t *out_x, uint16_t *out_y)
+void XPT2046_wr_cmd(uint8_t tx)
 {
-    int temp_x, temp_y;
-    int32_t tx = 0, ty = 0;
-    uint8_t datacount = 0;
+    SPI_write(tx, TOUCH);
+}
 
-    for (uint_fast8_t i = 10; i; --i)
-    {
-        touch_wr_cmd(0x90);
-        TOUCH_SCK_LO;																// Clock LOW
-        nop(); nop(); nop();
-        TOUCH_SCK_HI;																// Clock HIGH
-        nop(); nop(); nop();
-        temp_x = touch_rd_data();
-        touch_wr_cmd(0xD0);
-        TOUCH_SCK_LO;																// Clock LOW
-        nop(); nop(); nop();
-        TOUCH_SCK_HI;																// Clock HIGH
-        nop(); nop(); nop();
-        temp_y = touch_rd_data();
+uint8_t XPT2046_rd_data(uint8_t tx)
+{
+    uint8_t rx = SPI_rxtx(tx, TOUCH);
+    return rx;
+}
 
-        if (temp_x && temp_y
-                // && (temp_x > 0x01A0)
-                && (temp_x < 0x1F10)
-                //   && (temp_y > 0x02A3)
-                && (temp_y < 0x1EE6)
-           )
-        {
-            ty += temp_x;
-            tx += temp_y;
-            ++datacount;
-        }
-    }
+void XPT2046_rd_x(void)
+{
+    XPT2046_activate();
+    XPT2046_wr_cmd(START_BIT | X_POS | PD_MODE3);							// Start conversion for X (default 12 bit, DFR mode)
+    touch_xyz.touch_x = XPT2046_rd_data(0);
+    touch_xyz.touch_x <<= 8;
+    touch_xyz.touch_x |= XPT2046_rd_data(0);
+    XPT2046_deactivate();
+}
 
-    if (datacount)
-    {
-        tx /= datacount;
-        ty /= datacount;
-        // TODO: move all these to constants. I'm just being super hacky atm
-        tx -= 0x1A0;
-        ty -= 0x2A3;
-        tx *= 240;
-        tx /= (0x1F10 - 0x01A0);
-        ty *= 320;
-        ty /= (0x1EE6 - 0x02A3);
+void XPT2046_rd_y(void)
+{
+	XPT2046_activate();
+	XPT2046_wr_cmd(START_BIT | Y_POS | PD_MODE3);							// Start conversion for X (default 12 bit, DFR mode)
+	touch_xyz.touch_y = XPT2046_rd_data(0);
+	touch_xyz.touch_y <<= 8;
+	touch_xyz.touch_y |= XPT2046_rd_data(0);
+	XPT2046_deactivate();
+}
 
-        if (tx < 0)
-        {
-            tx = 0;
-        }
-        else if (tx > 239)
-        {
-            tx = 239;
-        }
+void XPT2046_rd_z1(void)
+{
+	XPT2046_activate();
+	XPT2046_wr_cmd(START_BIT | Z1_POS | PD_MODE3);							// Start conversion for X (default 12 bit, DFR mode)
+	touch_xyz.touch_z1 = XPT2046_rd_data(0);
+	touch_xyz.touch_z1 <<= 8;
+	touch_xyz.touch_z1 |= XPT2046_rd_data(0);
+	XPT2046_deactivate();
+}
 
-        if (ty < 0)
-        {
-            ty = 0;
-        }
-        else if (ty > 319)
-        {
-            ty = 319;
-        }
+void XPT2046_rd_z2(void)
+{
+	XPT2046_activate();
+	XPT2046_wr_cmd(START_BIT | Z2_POS | PD_MODE3);							// Start conversion for X (default 12 bit, DFR mode)
+	touch_xyz.touch_z2 = XPT2046_rd_data(0);
+	touch_xyz.touch_z2 <<= 8;
+	touch_xyz.touch_z2 |= XPT2046_rd_data(0);
+	XPT2046_deactivate();
+}
 
-        //  *out_x = tx;
-        //  *out_y = 320-ty;
-        *out_y = tx;
-        *out_x = ty;
-    }
-    else
-    {
-        *out_x = *out_y = 0xFFFF;
-    }
+void XPT2046_rd_xyz(void)
+{
+    XPT2046_activate();
+    XPT2046_wr_cmd(START_BIT | Z1_POS | PD_MODE1);
+    touch_xyz.touch_z1 = XPT2046_rd_data(0);
+    touch_xyz.touch_z1 <<= 8;
+    touch_xyz.touch_z1 |= XPT2046_rd_data(0);
+    XPT2046_wr_cmd(START_BIT | Z2_POS | PD_MODE1);
+    touch_xyz.touch_z2 = XPT2046_rd_data(0);
+    touch_xyz.touch_z2 <<= 8;
+    touch_xyz.touch_z2 |= XPT2046_rd_data(0);
+	XPT2046_wr_cmd(START_BIT | X_POS | PD_MODE1);							// Start conversion for X (default 12 bit, DFR mode)
+    touch_xyz.touch_x = XPT2046_rd_data(0);
+    touch_xyz.touch_x <<= 8;
+    touch_xyz.touch_x |= XPT2046_rd_data(0);
+    XPT2046_wr_cmd(START_BIT | Y_POS | PD_MODE1);
+    touch_xyz.touch_y = XPT2046_rd_data(0);
+    touch_xyz.touch_y <<= 8;
+    touch_xyz.touch_y |= XPT2046_rd_data(0);
+    
+    if ((rotation == LANDSCAPE) || (rotation == LANDSCAPE_REV)) swap(touch_xyz.touch_x, touch_xyz.touch_y);
+
+    XPT2046_deactivate();
+	// z2/z1=32000/400=80
+	// z2/z1=14000/1500=9 (lewy gorny)
+	// z2/z1=25000/3500=7 (prawy gorny)
+	// z2/z1=20000/5000=4 (srodek)
+	// z2/z1=18000/6000=3 (lewy dolny)
+	// z2/z1=30000/11000=3 (prawy dolny)
+}
+
+void XPT2046_rd_batt(void)
+{
+    XPT2046_activate();
+	XPT2046_wr_cmd(START_BIT | BAT_MONITOR | SER_MODE | PD_MODE1);			// Start conversion for battery (default 12 bit, SER mode)
+    touch_xyz.touch_batt = XPT2046_rd_data(0);
+    touch_xyz.touch_batt <<= 8;
+    touch_xyz.touch_batt  |= XPT2046_rd_data(0);
+	XPT2046_deactivate();
 }
 
 uint8_t touch_available(void)
@@ -191,7 +172,7 @@ uint8_t touch_available(void)
 	 if (!isrWake) return;
 	 uint32_t now = millis();
 	 if (now - msraw < MSEC_THRESHOLD) return;
-	 
+
 	 SPI.beginTransaction(SPI_SETTING);
 	 digitalWrite(csPin, LOW);
 	 SPI.transfer(0xB1 ); //z1
@@ -222,14 +203,14 @@ uint8_t touch_available(void)
 		 return;
 	 }
 	 zraw = z;
-	 
+
 	 // Average pair with least distance between each measured x then y
 	 //Serial.printf("    z1=%d,z2=%d  ", z1, z2);
 	 //Serial.printf("p=%d,  %d,%d  %d,%d  %d,%d", zraw,
 	 //data[0], data[1], data[2], data[3], data[4], data[5]);
 	 int16_t x = besttwoavg( data[0], data[2], data[4] );
 	 int16_t y = besttwoavg( data[1], data[3], data[5] );
-	 
+
 	 //Serial.printf("    %d,%d", x, y);
 	 //Serial.println();
 	 if (z >= Z_THRESHOLD) {

@@ -11,7 +11,6 @@
 
 #define USE_TOUCH_CS	1
 #define USE_PENIRQ		1
-#define TOUCH_HARD_SPI
 
 #define START_BIT       0x80
 #define MODE_12BIT      0x00
@@ -33,12 +32,22 @@
 #define Z1_POS          0x30
 #define Z2_POS          0x40
 
+#define		swap(a, b)	{uint16_t t = a ; a = b; b = t; }
+
 // definicje pinow
 #define		TOUCH_SCK	(1<<5)												// CLK
 #define 	TOUCH_MISO	(1<<4)												// MISO
 #define 	TOUCH_MOSI	(1<<3)												// MOSI
 #define 	TOUCH_IRQ	(1<<5)												// PENIRQ
+#define 	TOUCH_CS	(1<<7)												// CS
+
+/*
+#define		TOUCH_SCK	(1<<2)												// CLK
+#define 	TOUCH_MISO	(1<<3)												// MISO
+#define 	TOUCH_MOSI	(1<<4)												// MOSI
+#define 	TOUCH_IRQ	(1<<5)												// PENIRQ
 #define 	TOUCH_CS	(1<<6)												// CS
+*/
 
 // definicje portow
 #define 	TOUCH_SCK_PORT	PORTB
@@ -62,13 +71,26 @@
 #define 	TOUCH_CS_HI		TOUCH_CS_PORT |= TOUCH_CS
 #define		TOUCH_MISO_X	TOUCH_MISO_PIN & TOUCH_MISO
 
-void Touch_init(void);
-void touch_wr_cmd(uint8_t cmd);
-uint16_t touch_rd_data(void);
+typedef struct
+{
+	uint16_t touch_x;
+	uint16_t touch_y;
+	uint8_t touch_z;
+	uint16_t touch_z1;
+	uint16_t touch_z2;
+	uint16_t touch_batt;
+} touch_t;
 
-void touch_set(void);
-unsigned int get_touch_value(unsigned char CMD);
-void touch_xy(unsigned int *pxy);
-void display_position(unsigned int x, unsigned int y, unsigned int Pos);
+touch_t touch_xyz;
+
+void XPT2046_init_io(void);
+void XPT2046_wr_cmd(uint8_t tx);
+uint8_t XPT2046_rd_data(uint8_t tx);
+void XPT2046_rd_x(void);
+void XPT2046_rd_y(void);
+void XPT2046_rd_z1(void);
+void XPT2046_rd_z2(void);
+void XPT2046_rd_xyz(void);
+void XPT2046_rd_batt(void);
 
 #endif /* TOUCH_H_ */

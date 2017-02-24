@@ -20,11 +20,38 @@
 
 int main(void)
 {
-    ILI9341_init();															// Inicjalizacja
-	Touch_init();
-    ILI9341_select();
+    ILI9341_init();															// Inicjalizacja LCD
+	XPT2046_init_io();														// Inicjalizacja digitizera
     ILI9341_set_rotation(LANDSCAPE);										// Landscape
-    //ILI9341_cls(BLUE);														// Ekran na niebiesko
+    ILI9341_cls(BLUE);														// Ekran na niebiesko
+    ILI9341_set_font((font_t) {font16x16, 16, 16, YELLOW, BLUE});	// font 16x16 transparentny
+    ILI9341_txt(0, 0, "ID wyswietlacza:");
+    char driver_id_a[8];
+	//uint32_t data = ILI9341_rd_id();
+	ILI9341_txt(100, 20, itoa(ILI9341_rd_id(), driver_id_a, 16));
+	
+	ILI9341_txt(0, 40, "B");
+	ILI9341_txt(0, 60, "X");
+	ILI9341_txt(0, 80, "Y");
+	ILI9341_txt(0, 100, "Z1");
+	ILI9341_txt(0, 120, "Z2");
+	while (1)
+	{
+	XPT2046_rd_xyz();
+	XPT2046_rd_batt();
+	ILI9341_txt(40, 40, itoa(touch_xyz.touch_batt, driver_id_a, 10));
+	ILI9341_txt(40, 60, itoa(touch_xyz.touch_x, driver_id_a, 10));
+	ILI9341_txt(40, 80, itoa(touch_xyz.touch_y, driver_id_a, 10));
+	ILI9341_txt(40, 100, itoa(touch_xyz.touch_z1, driver_id_a, 10));
+	ILI9341_txt(40, 120, itoa(touch_xyz.touch_z2, driver_id_a, 10));
+	_delay_ms(50);
+	ILI9341_txt(40, 40, "      ");
+	ILI9341_txt(40, 60, "      ");
+	ILI9341_txt(40, 80, "      ");
+	ILI9341_txt(40, 100, "      ");
+	ILI9341_txt(40, 120, "      ");
+	}
+
     /*
     for (uint8_t i=0; i<100; i+=3)											// Zolta przerywana linia
     {
@@ -83,12 +110,6 @@ int main(void)
     //ILI9341_draw_fast_rect(150, 110, 160, 120, false, MAGENTA);				// Szybki prostokat
     //ILI9341_draw_fast_rect(0, 0, 320, 240, true, BLUE);						// Szybki wypelniony prostokat (CLS)
     //ILI9341_draw_fast_rect(10, 20, 40, 50, true, YELLOW);					// Szybki wypelniony prostokat
-    ILI9341_cls(BLUE);														// Ekran na niebiesko
-    ILI9341_set_font((font_t) {font16x16, 16, 16, YELLOW, TRANSPARENT});		// font 8x8 transparentny
-    ILI9341_txt(0, 0, "ID wyswietlacza:");
-    char driver_id_a[8];
-    uint32_t data = ILI9341_rd_id();
-    ILI9341_txt(0, 20, itoa(data, driver_id_a, 16));
 
     while (1)
     {
