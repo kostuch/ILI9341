@@ -24,32 +24,31 @@ int main(void)
 	XPT2046_init_io();														// Inicjalizacja digitizera
     ILI9341_set_rotation(LANDSCAPE);										// Landscape
     ILI9341_cls(BLUE);														// Ekran na niebiesko
-    ILI9341_set_font((font_t) {font16x16, 16, 16, YELLOW, BLUE});	// font 16x16 transparentny
-    ILI9341_txt(0, 0, "ID wyswietlacza:");
+    ILI9341_set_font((font_t) {font16x16, 16, 16, YELLOW, BLUE});			// font 16x16 transparentny
+    ILI9341_txt(0, 0, "Screen ID:");
     char driver_id_a[8];
 	//uint32_t data = ILI9341_rd_id();
 	ILI9341_txt(100, 20, itoa(ILI9341_rd_id(), driver_id_a, 16));
 	
-	ILI9341_txt(0, 40, "B");
 	ILI9341_txt(0, 60, "X");
 	ILI9341_txt(0, 80, "Y");
-	ILI9341_txt(0, 100, "Z1");
-	ILI9341_txt(0, 120, "Z2");
 	while (1)
 	{
-	XPT2046_rd_xyz();
-	XPT2046_rd_batt();
-	ILI9341_txt(40, 40, itoa(touch_xyz.touch_batt, driver_id_a, 10));
-	ILI9341_txt(40, 60, itoa(touch_xyz.touch_x, driver_id_a, 10));
-	ILI9341_txt(40, 80, itoa(touch_xyz.touch_y, driver_id_a, 10));
-	ILI9341_txt(40, 100, itoa(touch_xyz.touch_z1, driver_id_a, 10));
-	ILI9341_txt(40, 120, itoa(touch_xyz.touch_z2, driver_id_a, 10));
-	_delay_ms(50);
-	ILI9341_txt(40, 40, "      ");
-	ILI9341_txt(40, 60, "      ");
-	ILI9341_txt(40, 80, "      ");
-	ILI9341_txt(40, 100, "      ");
-	ILI9341_txt(40, 120, "      ");
+		XPT2046_rd_xyz();
+		ILI9341_txt(40, 60, itoa(touch_xyz.touch_x, driver_id_a, 10));
+		ILI9341_txt(40, 80, itoa(touch_xyz.touch_y, driver_id_a, 10));
+		_delay_ms(10);
+		ILI9341_txt(40, 60, "   ");
+		ILI9341_txt(40, 80, "   ");
+	
+		if (touch_xyz.touch_z) 
+		{
+			ILI9341_draw_pixel(touch_xyz.touch_x, touch_xyz.touch_y,YELLOW);
+			ILI9341_draw_pixel(touch_xyz.touch_x - 1, touch_xyz.touch_y,YELLOW);
+			ILI9341_draw_pixel(touch_xyz.touch_x + 1, touch_xyz.touch_y,YELLOW);
+			ILI9341_draw_pixel(touch_xyz.touch_x, touch_xyz.touch_y - 1,YELLOW);
+			ILI9341_draw_pixel(touch_xyz.touch_x, touch_xyz.touch_y + 1,YELLOW);
+		}
 	}
 
     /*

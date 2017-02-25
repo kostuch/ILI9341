@@ -31,6 +31,7 @@ void XPT2046_init_io(void)
 
 static inline void XPT2046_activate(void)
 {
+    SPCR |= (1 << SPR0);														// F_CPU/8
 #if USE_TOUCH_CS == 1														// If TOUCH_CS in use
     TOUCH_CS_LO;
 #endif
@@ -41,6 +42,7 @@ static inline void XPT2046_deactivate(void)
 #if USE_TOUCH_CS == 1														// If TOUCH_CS in use
     TOUCH_CS_HI;
 #endif
+    SPCR &= ~(1 << SPR0);														// F_CPU/2
 }
 
 void XPT2046_wr_cmd(uint8_t tx)
@@ -54,85 +56,55 @@ uint8_t XPT2046_rd_data(uint8_t tx)
     return rx;
 }
 
-void XPT2046_rd_x(void)
-{
-    XPT2046_activate();
-    XPT2046_wr_cmd(START_BIT | X_POS | PD_MODE3);							// Start conversion for X (default 12 bit, DFR mode)
-    touch_xyz.touch_x = XPT2046_rd_data(0);
-    touch_xyz.touch_x <<= 8;
-    touch_xyz.touch_x |= XPT2046_rd_data(0);
-    XPT2046_deactivate();
-}
-
-void XPT2046_rd_y(void)
-{
-	XPT2046_activate();
-	XPT2046_wr_cmd(START_BIT | Y_POS | PD_MODE3);							// Start conversion for X (default 12 bit, DFR mode)
-	touch_xyz.touch_y = XPT2046_rd_data(0);
-	touch_xyz.touch_y <<= 8;
-	touch_xyz.touch_y |= XPT2046_rd_data(0);
-	XPT2046_deactivate();
-}
-
-void XPT2046_rd_z1(void)
-{
-	XPT2046_activate();
-	XPT2046_wr_cmd(START_BIT | Z1_POS | PD_MODE3);							// Start conversion for X (default 12 bit, DFR mode)
-	touch_xyz.touch_z1 = XPT2046_rd_data(0);
-	touch_xyz.touch_z1 <<= 8;
-	touch_xyz.touch_z1 |= XPT2046_rd_data(0);
-	XPT2046_deactivate();
-}
-
-void XPT2046_rd_z2(void)
-{
-	XPT2046_activate();
-	XPT2046_wr_cmd(START_BIT | Z2_POS | PD_MODE3);							// Start conversion for X (default 12 bit, DFR mode)
-	touch_xyz.touch_z2 = XPT2046_rd_data(0);
-	touch_xyz.touch_z2 <<= 8;
-	touch_xyz.touch_z2 |= XPT2046_rd_data(0);
-	XPT2046_deactivate();
-}
-
 void XPT2046_rd_xyz(void)
 {
     XPT2046_activate();
-    XPT2046_wr_cmd(START_BIT | Z1_POS | PD_MODE1);
-    touch_xyz.touch_z1 = XPT2046_rd_data(0);
-    touch_xyz.touch_z1 <<= 8;
-    touch_xyz.touch_z1 |= XPT2046_rd_data(0);
-    XPT2046_wr_cmd(START_BIT | Z2_POS | PD_MODE1);
-    touch_xyz.touch_z2 = XPT2046_rd_data(0);
-    touch_xyz.touch_z2 <<= 8;
-    touch_xyz.touch_z2 |= XPT2046_rd_data(0);
-	XPT2046_wr_cmd(START_BIT | X_POS | PD_MODE1);							// Start conversion for X (default 12 bit, DFR mode)
-    touch_xyz.touch_x = XPT2046_rd_data(0);
-    touch_xyz.touch_x <<= 8;
-    touch_xyz.touch_x |= XPT2046_rd_data(0);
-    XPT2046_wr_cmd(START_BIT | Y_POS | PD_MODE1);
-    touch_xyz.touch_y = XPT2046_rd_data(0);
-    touch_xyz.touch_y <<= 8;
-    touch_xyz.touch_y |= XPT2046_rd_data(0);
-    
-    if ((rotation == LANDSCAPE) || (rotation == LANDSCAPE_REV)) swap(touch_xyz.touch_x, touch_xyz.touch_y);
+    XPT2046_wr_cmd(START_BIT | Z1_POS | MODE_8BIT | PD_MODE1);
+    touch_xyz.touch_z = XPT2046_rd_data(0);
+
+    if (touch_xyz.touch_z)													// z>0 when touched screen
+    {
+        XPT2046_wr_cmd(START_BIT | X_POS | PD_MODE1);						// Start conversion for X (default 12 bit, DFR mode)
+        touch_xyz.touch_x = XPT2046_rd_data(0);
+        touch_xyz.touch_x <<= 8;
+        touch_xyz.touch_x |= XPT2046_rd_data(0);
+        touch_xyz.touch_x /= 125;
+        XPT2046_wr_cmd(START_BIT | Y_POS | PD_MODE1);						// Start conversion for  (default 12 bit, DFR mode)
+        touch_xyz.touch_y = XPT2046_rd_data(0);
+        touch_xyz.touch_y <<= 8;
+        touch_xyz.touch_y |= XPT2046_rd_data(0);
+        touch_xyz.touch_y /= 94;
+
+		if ((rotation == LANDSCAPE) || (rotation == LANDSCAPE_REV)) swap(touch_xyz.touch_x, touch_xyz.touch_y);
+        
+		if (rotation == LANDSCAPE_REV)
+        {
+            touch_xyz.touch_x = TFT_WIDTH - touch_xyz.touch_x;
+            touch_xyz.touch_y = TFT_HEIGHT - touch_xyz.touch_y;
+        }
+
+        if (rotation == PORTRAIT) touch_xyz.touch_x = TFT_HEIGHT - touch_xyz.touch_x;
+
+        if (rotation == PORTRAIT_REV) touch_xyz.touch_y = TFT_WIDTH - touch_xyz.touch_y;
+
+    }
+    else																	// not touched - dummy XY values
+    {
+        touch_xyz.touch_x = -1;
+        touch_xyz.touch_y = -1;
+    }
 
     XPT2046_deactivate();
-	// z2/z1=32000/400=80
-	// z2/z1=14000/1500=9 (lewy gorny)
-	// z2/z1=25000/3500=7 (prawy gorny)
-	// z2/z1=20000/5000=4 (srodek)
-	// z2/z1=18000/6000=3 (lewy dolny)
-	// z2/z1=30000/11000=3 (prawy dolny)
 }
 
 void XPT2046_rd_batt(void)
 {
     XPT2046_activate();
-	XPT2046_wr_cmd(START_BIT | BAT_MONITOR | SER_MODE | PD_MODE1);			// Start conversion for battery (default 12 bit, SER mode)
+    XPT2046_wr_cmd(START_BIT | BAT_MONITOR | SER_MODE | PD_MODE1);			// Start conversion for battery (default 12 bit, SER mode)
     touch_xyz.touch_batt = XPT2046_rd_data(0);
     touch_xyz.touch_batt <<= 8;
     touch_xyz.touch_batt  |= XPT2046_rd_data(0);
-	XPT2046_deactivate();
+    XPT2046_deactivate();
 }
 
 uint8_t touch_available(void)

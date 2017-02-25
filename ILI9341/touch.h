@@ -32,7 +32,14 @@
 #define Z1_POS          0x30
 #define Z2_POS          0x40
 
-#define		swap(a, b)	{uint16_t t = a ; a = b; b = t; }
+#define X_MIN			2000
+#define X_MAX			30000
+#define Y_MIN			3500
+#define Y_MAX			30000
+#define X_SCALE			125													// 30000/240=125
+#define Y_SCALE			94													// 30000/320=94
+
+#define	swap(a, b)		{uint16_t t = a ; a = b; b = t; }
 
 // definicje pinow
 #define		TOUCH_SCK	(1<<5)												// CLK
@@ -76,8 +83,6 @@ typedef struct
 	uint16_t touch_x;
 	uint16_t touch_y;
 	uint8_t touch_z;
-	uint16_t touch_z1;
-	uint16_t touch_z2;
 	uint16_t touch_batt;
 } touch_t;
 
