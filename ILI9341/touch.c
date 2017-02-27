@@ -7,12 +7,15 @@
 
 #include <avr/io.h>
 #include <util/delay.h>
+#include <avr/eeprom.h>
 #include "touch.h"
 #include "ILI9341.h"
 #include "SPI.h"
 
 static inline void XPT2046_activate(void);
 static inline void XPT2046_deactivate(void);
+
+cal_t EEMEM ee_touch_cal;
 
 void XPT2046_init_io(void)
 {
@@ -56,44 +59,66 @@ uint8_t XPT2046_rd_data(uint8_t tx)
     return rx;
 }
 
-void XPT2046_rd_xyz(void)
+void XPT2046_rd_touch(void)
 {
+    /*
+     * z1=3, z2=57	19			z1=6, z2=115 19
+     *				z1=20,z2=80 4.0
+     * z1=25, z2=70	2.8			z1=43, z2=118 2.7
+     */
+	uint16_t temp;
     XPT2046_activate();
-    XPT2046_wr_cmd(START_BIT | Z1_POS | MODE_8BIT | PD_MODE1);
-    touch_xyz.touch_z = XPT2046_rd_data(0);
-
-    if (touch_xyz.touch_z)													// z>0 when touched screen
+	XPT2046_wr_cmd(START_BIT | Z1_POS | MODE_8BIT | PD_MODE1);				// Start conversion for Z1 (8 bit, DFR mode)
+	touch.z1 = XPT2046_rd_data(0);
+	XPT2046_wr_cmd(START_BIT | Z2_POS | MODE_8BIT | PD_MODE1);				// Start conversion for Z2 (8 bit, DFR mode)
+	touch.z2 = XPT2046_rd_data(0);
+	
+    if ((touch.z2 / (touch.z1 + 1)) < TOUCH_THRESHOLD)
     {
-        XPT2046_wr_cmd(START_BIT | X_POS | PD_MODE1);						// Start conversion for X (default 12 bit, DFR mode)
-        touch_xyz.touch_x = XPT2046_rd_data(0);
-        touch_xyz.touch_x <<= 8;
-        touch_xyz.touch_x |= XPT2046_rd_data(0);
-        touch_xyz.touch_x /= 125;
-        XPT2046_wr_cmd(START_BIT | Y_POS | PD_MODE1);						// Start conversion for  (default 12 bit, DFR mode)
-        touch_xyz.touch_y = XPT2046_rd_data(0);
-        touch_xyz.touch_y <<= 8;
-        touch_xyz.touch_y |= XPT2046_rd_data(0);
-        touch_xyz.touch_y /= 94;
-
-		if ((rotation == LANDSCAPE) || (rotation == LANDSCAPE_REV)) swap(touch_xyz.touch_x, touch_xyz.touch_y);
-        
-		if (rotation == LANDSCAPE_REV)
+        for (uint8_t avg = 0; avg < TOUCH_AVG; avg++)
         {
-            touch_xyz.touch_x = TFT_WIDTH - touch_xyz.touch_x;
-            touch_xyz.touch_y = TFT_HEIGHT - touch_xyz.touch_y;
+            XPT2046_wr_cmd(START_BIT | X_POS | PD_MODE1);					// Start conversion for X (default 12 bit, DFR mode)
+            temp = XPT2046_rd_data(0);
+            temp <<= 8;
+            temp |= XPT2046_rd_data(0);
+            temp /= X_MAX / TFT_HEIGHT;
+            touch.x *= TOUCH_FILTER;
+            touch.x += temp;
+            touch.x /= (TOUCH_FILTER + 1);
+            XPT2046_wr_cmd(START_BIT | Y_POS | PD_MODE1);					// Start conversion for Y (default 12 bit, DFR mode)
+            temp = XPT2046_rd_data(0);
+            temp <<= 8;
+            temp |= XPT2046_rd_data(0);
+            temp /= Y_MAX / TFT_WIDTH;
+            touch.y *= TOUCH_FILTER;
+            touch.y += temp;
+            touch.y /= (TOUCH_FILTER + 1);
         }
 
-        if (rotation == PORTRAIT) touch_xyz.touch_x = TFT_HEIGHT - touch_xyz.touch_x;
+        if ((rotation == LANDSCAPE) || (rotation == LANDSCAPE_REV)) swap(touch.x, touch.y);
 
-        if (rotation == PORTRAIT_REV) touch_xyz.touch_y = TFT_WIDTH - touch_xyz.touch_y;
+        if (rotation == LANDSCAPE_REV)
+        {
+            touch.x = TFT_WIDTH - touch.x;
+            touch.y = TFT_HEIGHT - touch.y;
+        }
 
+        if (rotation == PORTRAIT) touch.x = TFT_HEIGHT - touch.x;
+
+        if (rotation == PORTRAIT_REV) touch.y = TFT_WIDTH - touch.y;
+
+        //if (X_CAL > 128) touch.x += X_CAL - 128;					// Add/Substract X calibration value
+        //else touch.x -= 128 - X_CAL;
+
+        //if (Y_CAL > 128) touch.y += Y_CAL - 128;					// Add/Substract Y calibration value
+        //else touch.y -= 128 - Y_CAL;
     }
     else																	// not touched - dummy XY values
     {
-        touch_xyz.touch_x = -1;
-        touch_xyz.touch_y = -1;
+        touch.x = -1;
+        touch.y = -1;
     }
-
+	//xy_cal();																// Apply calibration values
     XPT2046_deactivate();
 }
 
@@ -101,94 +126,48 @@ void XPT2046_rd_batt(void)
 {
     XPT2046_activate();
     XPT2046_wr_cmd(START_BIT | BAT_MONITOR | SER_MODE | PD_MODE1);			// Start conversion for battery (default 12 bit, SER mode)
-    touch_xyz.touch_batt = XPT2046_rd_data(0);
-    touch_xyz.touch_batt <<= 8;
-    touch_xyz.touch_batt  |= XPT2046_rd_data(0);
+    touch.v = XPT2046_rd_data(0);
+    touch.v <<= 8;
+    touch.v |= XPT2046_rd_data(0);
     XPT2046_deactivate();
 }
 
-uint8_t touch_available(void)
+void XPT2046_rd_ee_cal(void)
 {
-    //return !(PIN & _BV(TOUCH_PENIRQ));
-    return 0;
-};
+	eeprom_read_block(&touch_cal, &ee_touch_cal, sizeof(cal_t));
+}
 
-/*
+void XPT2046_wr_ee_cal(void)
+{
+	eeprom_write_block(&touch_cal, &ee_touch_cal, sizeof(cal_t));
+}
 
- bool XPT2046_Touchscreen::bufferEmpty()
- {
-	 return ((millis() - msraw) < MSEC_THRESHOLD);
- }
-
- static int16_t besttwoavg( int16_t x , int16_t y , int16_t z ) {
-	 int16_t da, db, dc;
-	 int16_t reta = 0;
-	 if ( x > y ) da = x - y; else da = y - x;
-	 if ( x > z ) db = x - z; else db = z - x;
-	 if ( z > y ) dc = z - y; else dc = y - z;
-
-	 if ( da <= db && da <= dc ) reta = (x + y) >> 1;
-	 else if ( db <= da && db <= dc ) reta = (x + z) >> 1;
-	 else reta = (y + z) >> 1;   //    else if ( dc <= da && dc <= db ) reta = (x + y) >> 1;
-
-	 return (reta);
- }
-
- // TODO: perhaps a future version should offer an option for more oversampling,
- //       with the RANSAC algorithm https://en.wikipedia.org/wiki/RANSAC
-
- void XPT2046_Touchscreen::update()
- {
-	 int16_t data[6];
-
-	 if (!isrWake) return;
-	 uint32_t now = millis();
-	 if (now - msraw < MSEC_THRESHOLD) return;
-
-	 SPI.beginTransaction(SPI_SETTING);
-	 digitalWrite(csPin, LOW);
-	 SPI.transfer(0xB1 ); //z1
-	 int16_t z1 = SPI.transfer16(0xC1 ) >> 3; //z2
-	 int z = z1 + 4095;
-	 int16_t z2 = SPI.transfer16(0x91 ) >> 3; //x
-	 z -= z2;
-	 if (z >= Z_THRESHOLD) {
-		 SPI.transfer16(0x91 );  // dummy X measure, 1st is always noisy
-		 data[0] = SPI.transfer16(0xD1 ) >> 3; //y
-		 data[1] = SPI.transfer16(0x91 ) >> 3; // make 3 x-y measurements
-		 data[2] = SPI.transfer16(0xD1 ) >> 3;
-		 data[3] = SPI.transfer16(0x91 ) >> 3;
-	 }
-	 else data[0] = data[1] = data[2] = data[3] = 0;	// Compiler warns these values may be used unset on early exit.
-	 data[4] = SPI.transfer16(0xD0 ) >> 3;	// Last Y touch power down
-	 data[5] = SPI.transfer16(0) >> 3;
-	 digitalWrite(csPin, HIGH);
-	 SPI.endTransaction();
-	 //Serial.printf("z=%d  ::  z1=%d,  z2=%d  ", z, z1, z2);
-	 if (z < 0) z = 0;
-	 if (z < Z_THRESHOLD) { //	if ( !touched ) {
-		 // Serial.println();
-		 zraw = 0;
-		 if (z < Z_THRESHOLD_INT) { //	if ( !touched ) {
-			 if (255 != tirqPin) isrWake = false;
-		 }
-		 return;
-	 }
-	 zraw = z;
-
-	 // Average pair with least distance between each measured x then y
-	 //Serial.printf("    z1=%d,z2=%d  ", z1, z2);
-	 //Serial.printf("p=%d,  %d,%d  %d,%d  %d,%d", zraw,
-	 //data[0], data[1], data[2], data[3], data[4], data[5]);
-	 int16_t x = besttwoavg( data[0], data[2], data[4] );
-	 int16_t y = besttwoavg( data[1], data[3], data[5] );
-
-	 //Serial.printf("    %d,%d", x, y);
-	 //Serial.println();
-	 if (z >= Z_THRESHOLD) {
-		 msraw = now;	// good read completed, set wait
-		 xraw = x;
-		 yraw = y;
-	 }
- }
- */
+void xy_cal(void)
+{
+	if ((touch.x > T_H2) && (touch.x < T_W2))								// First quater?
+	{
+		touch.x += ((touch.x - 120) / 120) * ((160 - touch.y) / 160) * touch_cal.xc1;
+		touch.y += ((touch.x - 120) / 120) * ((160 - touch.y) / 160) * touch_cal.yc1;
+	} 
+	else
+	{
+		if ((touch.x > T_H2) && (touch.x < T_W2))							// Second quater?
+		{
+			touch.x += ((touch.x - 120) / 120) * ((touch.y - 160) / 160) * touch_cal.xc2;
+			touch.y += ((touch.x - 120) / 120) * ((touch.y - 160) / 160) * touch_cal.yc2;
+		}
+		else
+		{
+			if ((touch.x < T_H2) && (touch.x > T_W2))						// Third quater?
+			{
+				touch.x += ((120 - touch.x) / 120) * ((touch.y - 160) / 160) * touch_cal.xc3;
+				touch.y += ((120 - touch.x) / 120) * ((touch.y - 160) / 160) * touch_cal.yc3;
+			}
+			else															// Fourth quater
+			{
+				touch.x += ((120 - touch.x) / 120) * ((160 - touch.y) / 160) * touch_cal.xc4;
+				touch.y += ((120 - touch.x) / 120) * ((160 - touch.y) / 160) * touch_cal.yc4;
+			}
+		}
+	}
+}
