@@ -6,6 +6,7 @@
  */ 
 
 #include <avr/eeprom.h>
+#include <stdbool.h>
 
 #ifndef TOUCH_H_
 #define TOUCH_H_
@@ -44,7 +45,7 @@
 #define Y_SCALE			94													// 30000/320=94
 #define TOUCH_AVG		10													// Number of touch samples to avg
 #define TOUCH_FILTER	2													// Filter touch response
-#define TOUCH_THRESHOLD	25													// Z2/Z1
+#define TOUCH_THRESHOLD	700													// Y*(Z2/(Z1+1))
 #define X_CAL			118													// value>128 -> add
 #define Y_CAL			108													// value<128 -> substract
 #define	swap(a, b)		{uint16_t t = a ; a = b; b = t; }
@@ -93,6 +94,7 @@ typedef struct
 	uint8_t z1;
 	uint8_t z2;
 	uint16_t v;
+	bool ok;
 } touch_t;
 
 // ------------------
@@ -124,8 +126,7 @@ cal_t touch_cal;
 extern cal_t EEMEM ee_touch_cal;
 
 void XPT2046_init_io(void);
-void XPT2046_wr_cmd(uint8_t tx);
-uint8_t XPT2046_rd_data(uint8_t tx);
+//void XPT2046_wr_cmd(uint8_t tx);
 void XPT2046_rd_touch(void);
 void XPT2046_rd_batt(void);
 void XPT2046_rd_ee_cal(void);

@@ -7,6 +7,7 @@
 
 #include <avr/io.h>
 #include <util/delay.h>
+#include <stdlib.h>
 #include <avr/eeprom.h>
 #include "touch.h"
 #include "ILI9341.h"
@@ -14,6 +15,10 @@
 
 static inline void XPT2046_activate(void);
 static inline void XPT2046_deactivate(void);
+static inline void XPT2046_wr_cmd(uint8_t tx);
+static inline uint8_t XPT2046_rd_data(uint8_t tx);
+static inline int16_t XPT2046_rd16(uint8_t control);
+static inline uint8_t XPT2046_rd8(uint8_t control);
 
 cal_t EEMEM ee_touch_cal;
 
@@ -34,7 +39,7 @@ void XPT2046_init_io(void)
 
 static inline void XPT2046_activate(void)
 {
-    SPCR |= (1 << SPR0);														// F_CPU/8
+    SPCR |= (1 << SPR1);													// F_CPU/32
 #if USE_TOUCH_CS == 1														// If TOUCH_CS in use
     TOUCH_CS_LO;
 #endif
@@ -45,18 +50,34 @@ static inline void XPT2046_deactivate(void)
 #if USE_TOUCH_CS == 1														// If TOUCH_CS in use
     TOUCH_CS_HI;
 #endif
-    SPCR &= ~(1 << SPR0);														// F_CPU/2
+    SPCR &= ~(1 << SPR0);													// F_CPU/2
 }
 
-void XPT2046_wr_cmd(uint8_t tx)
+static inline void XPT2046_wr_cmd(uint8_t tx)
 {
     SPI_write(tx, TOUCH);
 }
 
-uint8_t XPT2046_rd_data(uint8_t tx)
+static inline uint8_t XPT2046_rd_data(uint8_t tx)
 {
     uint8_t rx = SPI_rxtx(tx, TOUCH);
     return rx;
+}
+
+static inline int16_t XPT2046_rd16(uint8_t control)
+{
+    XPT2046_wr_cmd(control);
+    int16_t value;
+    value = XPT2046_rd_data(0);
+    value <<= 8;
+    value |= XPT2046_rd_data(0);
+    return value;
+}
+
+static inline uint8_t XPT2046_rd8(uint8_t control)
+{
+    XPT2046_wr_cmd(control);
+    return XPT2046_rd_data(0);
 }
 
 void XPT2046_rd_touch(void)
@@ -66,59 +87,48 @@ void XPT2046_rd_touch(void)
      *				z1=20,z2=80 4.0
      * z1=25, z2=70	2.8			z1=43, z2=118 2.7
      */
-	uint16_t temp;
+    int16_t temp = 0;
     XPT2046_activate();
-	XPT2046_wr_cmd(START_BIT | Z1_POS | MODE_8BIT | PD_MODE1);				// Start conversion for Z1 (8 bit, DFR mode)
-	touch.z1 = XPT2046_rd_data(0);
-	XPT2046_wr_cmd(START_BIT | Z2_POS | MODE_8BIT | PD_MODE1);				// Start conversion for Z2 (8 bit, DFR mode)
-	touch.z2 = XPT2046_rd_data(0);
+
+	touch.z1 = XPT2046_rd8(START_BIT | Z1_POS | MODE_8BIT | PD_MODE1);		// Start conversion for Z1 (8 bit, DFR mode)
+	touch.z2 = XPT2046_rd8(START_BIT | Z2_POS | MODE_8BIT | PD_MODE1);		// Start conversion for Z2 (8 bit, DFR mode)
+
+    touch.x = 0;
+	touch.y = 0;
+	for (uint8_t avg = 0; avg < TOUCH_AVG; avg++)
+    {
+        temp = XPT2046_rd16(START_BIT | X_POS | PD_MODE1);				// Start conversion for X (default 12 bit, DFR mode)
+        temp /= X_MAX / TFT_HEIGHT;										// Scale raw->pixel
+        touch.x *= TOUCH_FILTER;										// Low-pass-avg filter
+        touch.x += temp;												// Low-pass-avg filter
+        touch.x /= (TOUCH_FILTER + 1);									// Low-pass-avg filter
+        temp = XPT2046_rd16(START_BIT | Y_POS | PD_MODE1);				// Start conversion for Y (default 12 bit, DFR mode)
+        temp /= Y_MAX / TFT_WIDTH;										// Scale raw->pixel
+        touch.y *= TOUCH_FILTER;										// Low-pass-avg filter
+        touch.y += temp;												// Low-pass-avg filter
+        touch.y /= (TOUCH_FILTER + 1);									// Low-pass-avg filter
+    }
 	
-    if ((touch.z2 / (touch.z1 + 1)) < TOUCH_THRESHOLD)
-    {
-        for (uint8_t avg = 0; avg < TOUCH_AVG; avg++)
-        {
-            XPT2046_wr_cmd(START_BIT | X_POS | PD_MODE1);					// Start conversion for X (default 12 bit, DFR mode)
-            temp = XPT2046_rd_data(0);
-            temp <<= 8;
-            temp |= XPT2046_rd_data(0);
-            temp /= X_MAX / TFT_HEIGHT;
-            touch.x *= TOUCH_FILTER;
-            touch.x += temp;
-            touch.x /= (TOUCH_FILTER + 1);
-            XPT2046_wr_cmd(START_BIT | Y_POS | PD_MODE1);					// Start conversion for Y (default 12 bit, DFR mode)
-            temp = XPT2046_rd_data(0);
-            temp <<= 8;
-            temp |= XPT2046_rd_data(0);
-            temp /= Y_MAX / TFT_WIDTH;
-            touch.y *= TOUCH_FILTER;
-            touch.y += temp;
-            touch.y /= (TOUCH_FILTER + 1);
-        }
+	if ((rotation == LANDSCAPE) || (rotation == LANDSCAPE_REV)) swap(touch.x, touch.y);
 
-        if ((rotation == LANDSCAPE) || (rotation == LANDSCAPE_REV)) swap(touch.x, touch.y);
+	if (rotation == LANDSCAPE_REV)
+	{
+		touch.x = TFT_WIDTH - touch.x;
+		touch.y = TFT_HEIGHT - touch.y;
+	}
 
-        if (rotation == LANDSCAPE_REV)
-        {
-            touch.x = TFT_WIDTH - touch.x;
-            touch.y = TFT_HEIGHT - touch.y;
-        }
+	if (rotation == PORTRAIT) touch.x = TFT_HEIGHT - touch.x;
 
-        if (rotation == PORTRAIT) touch.x = TFT_HEIGHT - touch.x;
+	if (rotation == PORTRAIT_REV) touch.y = TFT_WIDTH - touch.y;
 
-        if (rotation == PORTRAIT_REV) touch.y = TFT_WIDTH - touch.y;
+	if ((touch.y * ((touch.z2 / (touch.z1 + 1))) < TOUCH_THRESHOLD)) touch.ok = true;
+	else touch.ok = false;
 
-        //if (X_CAL > 128) touch.x += X_CAL - 128;					// Add/Substract X calibration value
-        //else touch.x -= 128 - X_CAL;
-
-        //if (Y_CAL > 128) touch.y += Y_CAL - 128;					// Add/Substract Y calibration value
-        //else touch.y -= 128 - Y_CAL;
-    }
-    else																	// not touched - dummy XY values
-    {
-        touch.x = -1;
-        touch.y = -1;
-    }
-	//xy_cal();																// Apply calibration values
+    //if (X_CAL > 128) touch.x += X_CAL - 128;					// Add/Substract X calibration value
+    //else touch.x -= 128 - X_CAL;
+    //if (Y_CAL > 128) touch.y += Y_CAL - 128;					// Add/Substract Y calibration value
+    //else touch.y -= 128 - Y_CAL;
+    //xy_cal();																// Apply calibration values
     XPT2046_deactivate();
 }
 
@@ -134,40 +144,40 @@ void XPT2046_rd_batt(void)
 
 void XPT2046_rd_ee_cal(void)
 {
-	eeprom_read_block(&touch_cal, &ee_touch_cal, sizeof(cal_t));
+    eeprom_read_block(&touch_cal, &ee_touch_cal, sizeof(cal_t));
 }
 
 void XPT2046_wr_ee_cal(void)
 {
-	eeprom_write_block(&touch_cal, &ee_touch_cal, sizeof(cal_t));
+    eeprom_write_block(&touch_cal, &ee_touch_cal, sizeof(cal_t));
 }
 
 void xy_cal(void)
 {
-	if ((touch.x > T_H2) && (touch.x < T_W2))								// First quater?
-	{
-		touch.x += ((touch.x - 120) / 120) * ((160 - touch.y) / 160) * touch_cal.xc1;
-		touch.y += ((touch.x - 120) / 120) * ((160 - touch.y) / 160) * touch_cal.yc1;
-	} 
-	else
-	{
-		if ((touch.x > T_H2) && (touch.x < T_W2))							// Second quater?
-		{
-			touch.x += ((touch.x - 120) / 120) * ((touch.y - 160) / 160) * touch_cal.xc2;
-			touch.y += ((touch.x - 120) / 120) * ((touch.y - 160) / 160) * touch_cal.yc2;
-		}
-		else
-		{
-			if ((touch.x < T_H2) && (touch.x > T_W2))						// Third quater?
-			{
-				touch.x += ((120 - touch.x) / 120) * ((touch.y - 160) / 160) * touch_cal.xc3;
-				touch.y += ((120 - touch.x) / 120) * ((touch.y - 160) / 160) * touch_cal.yc3;
-			}
-			else															// Fourth quater
-			{
-				touch.x += ((120 - touch.x) / 120) * ((160 - touch.y) / 160) * touch_cal.xc4;
-				touch.y += ((120 - touch.x) / 120) * ((160 - touch.y) / 160) * touch_cal.yc4;
-			}
-		}
-	}
+    if ((touch.x > T_H2) && (touch.x < T_W2))								// First quater?
+    {
+        touch.x += ((touch.x - 120) / 120) * ((160 - touch.y) / 160) * touch_cal.xc1;
+        touch.y += ((touch.x - 120) / 120) * ((160 - touch.y) / 160) * touch_cal.yc1;
+    }
+    else
+    {
+        if ((touch.x > T_H2) && (touch.x < T_W2))							// Second quater?
+        {
+            touch.x += ((touch.x - 120) / 120) * ((touch.y - 160) / 160) * touch_cal.xc2;
+            touch.y += ((touch.x - 120) / 120) * ((touch.y - 160) / 160) * touch_cal.yc2;
+        }
+        else
+        {
+            if ((touch.x < T_H2) && (touch.x > T_W2))						// Third quater?
+            {
+                touch.x += ((120 - touch.x) / 120) * ((touch.y - 160) / 160) * touch_cal.xc3;
+                touch.y += ((120 - touch.x) / 120) * ((touch.y - 160) / 160) * touch_cal.yc3;
+            }
+            else															// Fourth quater
+            {
+                touch.x += ((120 - touch.x) / 120) * ((160 - touch.y) / 160) * touch_cal.xc4;
+                touch.y += ((120 - touch.x) / 120) * ((160 - touch.y) / 160) * touch_cal.yc4;
+            }
+        }
+    }
 }

@@ -31,25 +31,46 @@ int main(void)
     char driver_id_a[8];
 	ILI9341_txt(160, 0, itoa(ILI9341_rd_id(), driver_id_a, 16));
 	
-	//ILI9341_txt(0, 60, "Z1");
-	//ILI9341_txt(0, 80, "Z2");
-	//ILI9341_txt(0, 80, "Y");
+	ILI9341_txt(0, 20, "X");
+	ILI9341_txt(0, 40, "Y");
+	ILI9341_txt(0, 60, "Z1");
+	ILI9341_txt(0, 80, "Z2");
+	ILI9341_txt(0, 100, "Pr");
 	while (1)
 	{
 		XPT2046_rd_touch();
-		//ILI9341_txt(40, 60, "   ");
-		//ILI9341_txt(40, 60, itoa(touch.z1, driver_id_a, 10));
-		//ILI9341_txt(40, 80, "   ");
-		//ILI9341_txt(40, 80, itoa(touch.z2, driver_id_a, 10));
-		_delay_ms(2);
+		/*
+		ILI9341_txt(40, 60, "      ");
+		ILI9341_txt(40, 60, itoa(touch.z1, driver_id_a, 10));
+		ILI9341_txt(40, 80, "      ");
+		ILI9341_txt(40, 80, itoa(touch.z2, driver_id_a, 10));
+		ILI9341_txt(40, 100, "      ");
+		ILI9341_txt(40, 100, itoa(touch.y * (touch.z2 / (touch.z1 + 1)), driver_id_a, 10));
+		*/
+		//_delay_ms(5);
 		
-		if ((touch.z2 / (touch.z1 + 1)) < TOUCH_THRESHOLD)
+		if (touch.ok)
 		{
 			ILI9341_draw_pixel(touch.x, touch.y,YELLOW);
 			ILI9341_draw_pixel(touch.x - 1, touch.y,YELLOW);
 			ILI9341_draw_pixel(touch.x + 1, touch.y,YELLOW);
 			ILI9341_draw_pixel(touch.x, touch.y - 1,YELLOW);
 			ILI9341_draw_pixel(touch.x, touch.y + 1,YELLOW);
+			/*
+			if (touch.y < 200)
+			{
+				ILI9341_txt(40, 20, "      ");
+				ILI9341_txt(40, 20, itoa(touch.x, driver_id_a, 10));
+				ILI9341_txt(40, 40, "      ");
+				ILI9341_txt(40, 40, itoa(touch.y, driver_id_a, 10));
+				ILI9341_txt(40, 60, "      ");
+				ILI9341_txt(40, 60, itoa(touch.z1, driver_id_a, 10));
+				ILI9341_txt(40, 80, "      ");
+				ILI9341_txt(40, 80, itoa(touch.z2, driver_id_a, 10));
+				ILI9341_txt(40, 100, "      ");
+				ILI9341_txt(40, 100, itoa(touch.y * (touch.z2 / (touch.z1 + 1)), driver_id_a, 10));
+			}
+			*/
 		}
 		
 	}
