@@ -119,11 +119,7 @@ void XPT2046_rd_touch(void)
 	if ((touch.y * ((touch.z2 / (touch.z1 + 1))) < TOUCH_THRESHOLD)) touch.ok = true;
 	else touch.ok = false;
 
-    //if (X_CAL > 128) touch.x += X_CAL - 128;					// Add/Substract X calibration value
-    //else touch.x -= 128 - X_CAL;
-    //if (Y_CAL > 128) touch.y += Y_CAL - 128;					// Add/Substract Y calibration value
-    //else touch.y -= 128 - Y_CAL;
-    //xy_cal();																// Apply calibration values
+    xy_cal();																// Apply calibration values
     XPT2046_deactivate();
 }
 
@@ -149,21 +145,21 @@ void XPT2046_wr_ee_cal(void)
 
 void xy_cal(void)
 {
-    if ((touch.x > T_H2) && (touch.x < T_W2))								// First quater?
+    if ((touch.y > T_H2) && (touch.x < T_W2))								// First quater?
     {
         touch.x += ((touch.x - 120) / 120) * ((160 - touch.y) / 160) * touch_cal.xc1;
         touch.y += ((touch.x - 120) / 120) * ((160 - touch.y) / 160) * touch_cal.yc1;
     }
     else
     {
-        if ((touch.x > T_H2) && (touch.x < T_W2))							// Second quater?
+        if ((touch.y > T_H2) && (touch.x < T_W2))							// Second quater?
         {
             touch.x += ((touch.x - 120) / 120) * ((touch.y - 160) / 160) * touch_cal.xc2;
             touch.y += ((touch.x - 120) / 120) * ((touch.y - 160) / 160) * touch_cal.yc2;
         }
         else
         {
-            if ((touch.x < T_H2) && (touch.x > T_W2))						// Third quater?
+            if ((touch.y < T_H2) && (touch.x > T_W2))						// Third quater?
             {
                 touch.x += ((120 - touch.x) / 120) * ((touch.y - 160) / 160) * touch_cal.xc3;
                 touch.y += ((120 - touch.x) / 120) * ((touch.y - 160) / 160) * touch_cal.yc3;

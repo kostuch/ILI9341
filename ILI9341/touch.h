@@ -16,8 +16,8 @@
 
 #define T_HEIGHT		240
 #define T_WIDTH			320
-#define T_H2			(T_HEIGHT / 2)
-#define T_W2			(T_WIDTH / 2)
+#define T_H2			T_HEIGHT / 2
+#define T_W2			T_WIDTH / 2
 
 #define START_BIT       0x80
 #define MODE_12BIT      0x00
@@ -46,7 +46,7 @@
 #define TOUCH_AVG		10													// Number of touch samples to avg
 #define TOUCH_FILTER	2													// Filter touch response
 #define TOUCH_THRESHOLD	700													// Y*(Z2/(Z1+1))
-#define MAX_CAL_ERROR	10													// Max difference at calibration moment
+#define MAX_CAL_ERROR	25													// Max difference at calibration moment
 #define X_CAL			118													// value>128 -> add
 #define Y_CAL			108													// value<128 -> substract
 #define	swap(a, b)		{uint16_t t = a ; a = b; b = t; }

@@ -23,6 +23,7 @@
 #include "globals.h"
 
 void touch_calibration(void);
+char driver_id_a[8];
 
 int main(void)
 {
@@ -30,20 +31,28 @@ int main(void)
     XPT2046_init_io();														// Inicjalizacja digitizera
     XPT2046_rd_ee_cal();
     ILI9341_set_rotation(LANDSCAPE);										// Landscape
-    ILI9341_cls(BLUE);														// Ekran na niebiesko
+	ILI9341_cls(BLUE);														// Ekran na niebiesko
     ILI9341_set_font((font_t) {font16x16, 16, 16, YELLOW, BLUE});			// font 16x16 transparentny
+	/*
     ILI9341_txt(0, 0, "Screen ID:");
-    char driver_id_a[8];
     ILI9341_txt(160, 0, itoa(ILI9341_rd_id(), driver_id_a, 16));
     ILI9341_txt(0, 20, "X");
     ILI9341_txt(0, 40, "Y");
     ILI9341_txt(0, 60, "Z1");
     ILI9341_txt(0, 80, "Z2");
     ILI9341_txt(0, 100, "Pr");
-    touch_calibration();
-
-    while (1) {}
-
+    */
+	
+	//touch_calibration();													// Kalibracja dotyku
+                ILI9341_txt(20,40, itoa(touch_cal.xc1, driver_id_a, 10));
+                ILI9341_txt(80,40, itoa(touch_cal.yc1, driver_id_a, 10));
+				ILI9341_txt(20,220, itoa(touch_cal.xc2, driver_id_a, 10));
+				ILI9341_txt(80,220, itoa(touch_cal.yc2, driver_id_a, 10));
+				ILI9341_txt(200,220, itoa(touch_cal.xc3, driver_id_a, 10));
+				ILI9341_txt(260,220, itoa(touch_cal.yc3, driver_id_a, 10));
+				ILI9341_txt(200,40, itoa(touch_cal.xc4, driver_id_a, 10));
+				ILI9341_txt(260,40, itoa(touch_cal.yc4, driver_id_a, 10));
+				
     while (1)
     {
         XPT2046_rd_touch();
@@ -135,7 +144,7 @@ void touch_calibration(void)
 {
     ILI9341_cls(BLACK);
     ILI9341_set_font((font_t) {font16x16, 16, 16, RED, BLACK});
-    int16_t x, y;
+	int16_t x, y;
 
     for (uint8_t cal_step = 0; cal_step < 4; cal_step++)					// Four calibration points
     {
@@ -154,25 +163,41 @@ void touch_calibration(void)
             case 0:
                 touch_cal.xc1 = x - touch.x;
                 touch_cal.yc1 = y - touch.y;
+				//ILI9341_txt(20,20, itoa(x, driver_id_a, 10));
+				//ILI9341_txt(80,20, itoa(y, driver_id_a, 10));
+                //ILI9341_txt(20,40, itoa(x - touch.x, driver_id_a, 10));
+                //ILI9341_txt(80,40, itoa(y - touch.y, driver_id_a, 10));
                 break;
 
             case 1:
                 touch_cal.xc2 = x - touch.x;
                 touch_cal.yc2 = y - touch.y;
+                //ILI9341_txt(20,200, itoa(x, driver_id_a, 10));
+                //ILI9341_txt(80,200, itoa(y, driver_id_a, 10));
+                //ILI9341_txt(20,220, itoa(x - touch.x, driver_id_a, 10));
+                //ILI9341_txt(80,220, itoa(y - touch.y, driver_id_a, 10));
                 break;
 
             case 2:
                 touch_cal.xc3 = x - touch.x;
                 touch_cal.yc3 = y - touch.y;
+                //ILI9341_txt(200,200, itoa(x, driver_id_a, 10));
+                //ILI9341_txt(260,200, itoa(y, driver_id_a, 10));
+                //ILI9341_txt(200,220, itoa(x - touch.x, driver_id_a, 10));
+                //ILI9341_txt(260,220, itoa(y - touch.y, driver_id_a, 10));
                 break;
 
             case 3:
                 touch_cal.xc4 = x - touch.x;
                 touch_cal.yc4 = y - touch.y;
+                //ILI9341_txt(200,20, itoa(x, driver_id_a, 10));
+                //ILI9341_txt(260,20, itoa(y, driver_id_a, 10));
+                //ILI9341_txt(200,40, itoa(x - touch.x, driver_id_a, 10));
+                //ILI9341_txt(260,40, itoa(y - touch.y, driver_id_a, 10));
                 break;
         }
 
-        ILI9341_txt_P(0, 160, PGM_GETSTR(calibration_txt, cal_next_idx));
+        ILI9341_txt_P(0, 120, PGM_GETSTR(calibration_txt, cal_next_idx));
         _delay_ms(1000);
         ILI9341_draw_circle(x, y, 5, false, BLACK);							// Remove old calibration circle
     }
@@ -184,10 +209,10 @@ void touch_calibration(void)
             (abs(touch_cal.xc3) > MAX_CAL_ERROR) ||
             (abs(touch_cal.yc3) > MAX_CAL_ERROR) ||
             (abs(touch_cal.xc4) > MAX_CAL_ERROR) ||
-            (abs(touch_cal.yc4) > MAX_CAL_ERROR)) ILI9341_txt_P(0, 160, PGM_GETSTR(calibration_txt, cal_ok_idx));
+            (abs(touch_cal.yc4) > MAX_CAL_ERROR)) ILI9341_txt_P(0, 120, PGM_GETSTR(calibration_txt, cal_bad_idx));
     else
     {
         XPT2046_wr_ee_cal();
-        ILI9341_txt_P(0, 160, PGM_GETSTR(calibration_txt, cal_bad_idx));
+        ILI9341_txt_P(0, 120, PGM_GETSTR(calibration_txt, cal_ok_idx));
     }
 }
