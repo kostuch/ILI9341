@@ -114,47 +114,57 @@ static uint8_t ILI9341_rd_cmd(uint8_t addr, uint8_t parameter)
 void ILI9341_init()
 {
     ILI9341_init_io();
-    TFT_RST_HI;
-    _delay_ms(50);
-    TFT_RST_LO;
-    _delay_ms(50);
-    TFT_RST_HI;
-    _delay_ms(50);
-    ILI9341_wr_cmd(ILI9341_POWER_CONTROL_A);								// ??? bez tego nie dziala
-    ILI9341_wr_data(0x39);
-    ILI9341_wr_data(0x2C);
-    ILI9341_wr_data(0x00);
-    ILI9341_wr_data(0x34);
-    ILI9341_wr_data(0x02);
-    ILI9341_wr_cmd(ILI9341_POWER_CONTROL_B);								// ??? bez tego nie dziala
-    ILI9341_wr_data(0x00);
-    ILI9341_wr_data(0xAA);
-    ILI9341_wr_data(0XB0);
-    ILI9341_wr_cmd(ILI9341_PUMP_RATIO_CONTROL);								// ???
-    ILI9341_wr_data(0x30);
-    ILI9341_wr_cmd(ILI9341_POWER_CONTROL_1);								// jakies napiecie GVDD
-    ILI9341_wr_data(0x25);
-    ILI9341_wr_cmd(ILI9341_POWER_CONTROL_2);								// wspolczynnik step-up
-    ILI9341_wr_data(0x11);
-    ILI9341_wr_cmd(ILI9341_VCOM_CONTROL_1);									// jakies napiecia VCOMH i VCOML
-    ILI9341_wr_data(0x5C);
-    ILI9341_wr_data(0x4C);
-    ILI9341_wr_cmd(ILI9341_VCOM_CONTROL_2);									// jakies stosunki VCOMH/VCOML
-    ILI9341_wr_data(0x94);
-    ILI9341_wr_cmd(ILI9341_DRIVER_TIMING_CONTROL_A);						// ??? bez tego nie dziala
-    ILI9341_wr_data(0x85);
-    ILI9341_wr_data(0x01);
-    ILI9341_wr_data(0x78);
-    ILI9341_wr_cmd(ILI9341_DRIVER_TIMING_CONTROL_B);						// ???
-    ILI9341_wr_data(0x00);
-    ILI9341_wr_data(0x00);
-    ILI9341_wr_cmd(ILI9341_COLMOD_PIXEL_FORMAT_SET);						// ok
-    ILI9341_wr_data(0x05);
-    ILI9341_wr_cmd(ILI9341_FRAME_RATE_CONTROL_NORMAL);						// stabilniejszy obraz bez migotania
-    ILI9341_wr_data(0x00);
-    ILI9341_wr_data(0x10);
-    ILI9341_wr_cmd(ILI9341_SLEEP_OUT);										// ok
-    ILI9341_wr_cmd(ILI9341_DISPLAY_ON);										// ok
+	TFT_RST_LO;
+	_delay_ms(50);
+	TFT_RST_HI;
+	_delay_ms(50);
+	ILI9341_wr_cmd(ILI9341_SLEEP_OUT);									//sleep out
+	ILI9341_wr_cmd(ILI9341_POWER_CONTROL_B);							//power control b
+	ILI9341_wr_data(0x00);
+	ILI9341_wr_data(0x83);
+	ILI9341_wr_data(0x30);
+	ILI9341_wr_cmd(ILI9341_SOMETHING);									//power on seq control
+	ILI9341_wr_data(0x64);
+	ILI9341_wr_data(0x03);
+	ILI9341_wr_data(0x12);
+	ILI9341_wr_data(0x81);
+	ILI9341_wr_cmd(ILI9341_DRIVER_TIMING_CONTROL_A);					//timing control a
+	ILI9341_wr_data(0x85);
+	ILI9341_wr_data(0x01);
+	ILI9341_wr_data(0x79);
+	ILI9341_wr_cmd(ILI9341_POWER_ON_SEQ_CONTROL);						//power control a
+	ILI9341_wr_data(0x39);
+	ILI9341_wr_data(0X2C);
+	ILI9341_wr_data(0x00);
+	ILI9341_wr_data(0x34);
+	ILI9341_wr_data(0x02);
+	ILI9341_wr_cmd(ILI9341_PUMP_RATIO_CONTROL);							//pump ratio control
+	ILI9341_wr_data(0x20);
+	ILI9341_wr_cmd(ILI9341_DRIVER_TIMING_CONTROL_B);					//timing control b
+	ILI9341_wr_data(0x00);
+	ILI9341_wr_data(0x00);
+	ILI9341_wr_cmd(ILI9341_POWER_CONTROL_1);							//power control 1
+	ILI9341_wr_data(0x26);
+	ILI9341_wr_cmd(ILI9341_POWER_CONTROL_2);							//power control 2
+	ILI9341_wr_data(0x11);
+	ILI9341_wr_cmd(ILI9341_VCOM_CONTROL_1);								//vcom control 1
+	ILI9341_wr_data(0x35);
+	ILI9341_wr_data(0x3E);
+	ILI9341_wr_cmd(ILI9341_VCOM_CONTROL_2);								//vcom control 2
+	ILI9341_wr_data(0xBE);
+	ILI9341_wr_cmd(ILI9341_FRAME_RATE_CONTROL_NORMAL);					//frame control
+	ILI9341_wr_data(0x00);
+	ILI9341_wr_data(0x1B);
+	ILI9341_wr_cmd(ILI9341_DISPLAY_FUNCTION_CONTROL);					//display control
+	ILI9341_wr_data(0x0A);
+	ILI9341_wr_data(0x82);
+	ILI9341_wr_data(0x27);
+	ILI9341_wr_data(0x00);
+	ILI9341_wr_cmd(ILI9341_ENTRY_MODE_SET);								//emtry mode
+	ILI9341_wr_data(0x07);
+	ILI9341_wr_cmd(ILI9341_COLMOD_PIXEL_FORMAT_SET);					//pixel format
+	ILI9341_wr_data(0x55); //16bit
+	ILI9341_wr_cmd(ILI9341_DISPLAY_ON);									//display on
 }
 
 uint32_t ILI9341_rd_id(void)
@@ -355,6 +365,20 @@ void ILI9341_txt(uint16_t x, uint16_t y, char *string)
 
         string++;
     }
+}
+
+/* Draw text from program memory at given coordinates */
+void ILI9341_txt_P(uint16_t x, uint16_t y, const char *string)
+{
+	while (pgm_read_byte(string))
+	{
+		ILI9341_chr(x, y, pgm_read_byte(string));
+
+		if (current_font.x_size == 5) x += 6;
+		else x += current_font.x_size;
+
+		string++;
+	}
 }
 
 /* Set parameters for current text */

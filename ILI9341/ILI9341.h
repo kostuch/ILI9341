@@ -136,6 +136,7 @@ void ILI9341_draw_mono_trans_bmp(uint16_t x, uint16_t y, uint16_t width, uint16_
 void ILI9341_draw_color_bmp(uint16_t x, uint16_t y, uint16_t height, uint16_t width, const uint16_t *bitmap);
 void ILI9341_chr(uint16_t x, uint16_t y, char c);
 void ILI9341_txt(uint16_t x, uint16_t y, char *string);
+void ILI9341_txt_P(uint16_t x, uint16_t y, const char *string);
 
 /* Level 1 Commands (from the display Datasheet) */
 #define ILI9341_NOP                             0x00

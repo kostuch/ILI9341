@@ -46,6 +46,7 @@
 #define TOUCH_AVG		10													// Number of touch samples to avg
 #define TOUCH_FILTER	2													// Filter touch response
 #define TOUCH_THRESHOLD	700													// Y*(Z2/(Z1+1))
+#define MAX_CAL_ERROR	10													// Max difference at calibration moment
 #define X_CAL			118													// value>128 -> add
 #define Y_CAL			108													// value<128 -> substract
 #define	swap(a, b)		{uint16_t t = a ; a = b; b = t; }

@@ -20,7 +20,7 @@ static inline uint8_t XPT2046_rd_data(uint8_t tx);
 static inline int16_t XPT2046_rd16(uint8_t control);
 static inline uint8_t XPT2046_rd8(uint8_t control);
 
-cal_t EEMEM ee_touch_cal;
+cal_t EEMEM ee_touch_cal = {1, -1, 2, -2, 3, -3, 4, -4};
 
 void XPT2046_init_io(void)
 {
@@ -82,12 +82,7 @@ static inline uint8_t XPT2046_rd8(uint8_t control)
 
 void XPT2046_rd_touch(void)
 {
-    /*
-     * z1=3, z2=57	19			z1=6, z2=115 19
-     *				z1=20,z2=80 4.0
-     * z1=25, z2=70	2.8			z1=43, z2=118 2.7
-     */
-    int16_t temp = 0;
+    int16_t temp;
     XPT2046_activate();
 
 	touch.z1 = XPT2046_rd8(START_BIT | Z1_POS | MODE_8BIT | PD_MODE1);		// Start conversion for Z1 (8 bit, DFR mode)
@@ -97,16 +92,16 @@ void XPT2046_rd_touch(void)
 	touch.y = 0;
 	for (uint8_t avg = 0; avg < TOUCH_AVG; avg++)
     {
-        temp = XPT2046_rd16(START_BIT | X_POS | PD_MODE1);				// Start conversion for X (default 12 bit, DFR mode)
-        temp /= X_MAX / TFT_HEIGHT;										// Scale raw->pixel
-        touch.x *= TOUCH_FILTER;										// Low-pass-avg filter
-        touch.x += temp;												// Low-pass-avg filter
-        touch.x /= (TOUCH_FILTER + 1);									// Low-pass-avg filter
-        temp = XPT2046_rd16(START_BIT | Y_POS | PD_MODE1);				// Start conversion for Y (default 12 bit, DFR mode)
-        temp /= Y_MAX / TFT_WIDTH;										// Scale raw->pixel
-        touch.y *= TOUCH_FILTER;										// Low-pass-avg filter
-        touch.y += temp;												// Low-pass-avg filter
-        touch.y /= (TOUCH_FILTER + 1);									// Low-pass-avg filter
+        temp = XPT2046_rd16(START_BIT | X_POS | PD_MODE1);					// Start conversion for X (default 12 bit, DFR mode)
+        temp /= X_MAX / TFT_HEIGHT;											// Scale raw->pixel
+        touch.x *= TOUCH_FILTER;											// Low-pass-avg filter
+        touch.x += temp;													// Low-pass-avg filter
+        touch.x /= (TOUCH_FILTER + 1);										// Low-pass-avg filter
+        temp = XPT2046_rd16(START_BIT | Y_POS | PD_MODE1);					// Start conversion for Y (default 12 bit, DFR mode)
+        temp /= Y_MAX / TFT_WIDTH;											// Scale raw->pixel
+        touch.y *= TOUCH_FILTER;											// Low-pass-avg filter
+        touch.y += temp;													// Low-pass-avg filter
+        touch.y /= (TOUCH_FILTER + 1);										// Low-pass-avg filter
     }
 	
 	if ((rotation == LANDSCAPE) || (rotation == LANDSCAPE_REV)) swap(touch.x, touch.y);
