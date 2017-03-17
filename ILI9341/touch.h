@@ -43,13 +43,11 @@
 #define Y_MAX			30000
 #define X_SCALE			125													// 30000/240=125
 #define Y_SCALE			94													// 30000/320=94
-#define TOUCH_AVG		10													// Number of touch samples to avg
-#define TOUCH_FILTER	2													// Filter touch response
+#define TOUCH_AVG		16													// Number of touch samples to avg
+#define TOUCH_FILTER	3													// Filter touch response
 #define TOUCH_THRESHOLD	700													// Y*(Z2/(Z1+1))
-#define MAX_CAL_ERROR	25													// Max difference at calibration moment
-#define X_CAL			118													// value>128 -> add
-#define Y_CAL			108													// value<128 -> substract
-#define	swap(a, b)		{uint16_t t = a ; a = b; b = t; }
+#define MAX_CAL_ERROR	15													// Max difference at calibration moment
+#define	swap(a, b)		{int16_t t = a ; a = b; b = t; }
 
 // definicje pinow
 #define		TOUCH_SCK	(1<<5)												// CLK
@@ -90,48 +88,30 @@
 
 typedef struct
 {
-	int16_t x;
-	int16_t y;
-	uint8_t z1;
-	uint8_t z2;
-	uint16_t v;
-	bool ok;
+	int16_t x_raw;															// X raw value
+	int16_t y_raw;															// Y raw value
+	int16_t x_cal;															// X calibrated
+	int16_t y_cal;															// Y calibrated
+	uint8_t z1;																// Pressure 1
+	uint8_t z2;																// Pressure 2
+	bool ok;																// Reading OK
 } touch_t;
 
-// ------------------
-// | UL          UR |
-// |                |
-// |                |
-// |                |
-// |                |
-// |                |
-// |                |
-// |                |
-// | DL          DR |
-// ------------------
+/* This arrangement of values facilitates *  calculations within getDisplayPoint() */typedef struct{	int32_t An;	int32_t Bn;	int32_t Cn;	int32_t Dn;	int32_t En;	int32_t Fn;	int32_t divider;} cal_t;
 
-typedef struct
-{
-	int8_t xc1;
-	int8_t yc1;
-	int8_t xc2;
-	int8_t yc2;
-	int8_t xc3;
-	int8_t yc3;
-	int8_t xc4;
-	int8_t yc4;
-} cal_t;
+typedef struct{	int32_t x;	int32_t y;} point_t;
 
 touch_t touch;
 cal_t touch_cal;
 extern cal_t EEMEM ee_touch_cal;
+extern point_t EEMEM ee_cal_points[];
+extern point_t sample_points[];
 
 void XPT2046_init_io(void);
-//void XPT2046_wr_cmd(uint8_t tx);
 void XPT2046_rd_touch(void);
-void XPT2046_rd_batt(void);
 void XPT2046_rd_ee_cal(void);
 void XPT2046_wr_ee_cal(void);
-void xy_cal(void);
+
+void set_cal_matrix(point_t *samples);void get_display_point(void);
 
 #endif /* TOUCH_H_ */

@@ -9,10 +9,10 @@
 #ifndef LITERALS_H_
 #define LITERALS_H_
 
-const char cal_prompt[] PROGMEM =	{"Dotknij kolko"};
+const char cal_prompt[] PROGMEM =	{"Dotknij kolko   "};
 const char cal_bad[] PROGMEM =		{"Blad kalibracji!"};
-const char cal_ok[] PROGMEM =		{"Kalibracja OK!"};
-const char cal_next[] PROGMEM =		{"Nastepny..."};
+const char cal_ok[] PROGMEM =		{"Kalibracja OK!  "};
+const char cal_next[] PROGMEM =		{"Nastepny...     "};
 
 enum cal_txt {cal_prompt_idx = 0, cal_bad_idx = 1, cal_ok_idx = 2, cal_next_idx = 3};
 
