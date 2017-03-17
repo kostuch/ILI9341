@@ -43,11 +43,11 @@
 #define Y_MAX			30000
 #define X_SCALE			125													// 30000/240=125
 #define Y_SCALE			94													// 30000/320=94
-#define TOUCH_AVG		16													// Number of touch samples to avg
-#define TOUCH_FILTER	3													// Filter touch response
+#define TOUCH_AVG		10													// Number of touch samples to avg
+#define TOUCH_FILTER	2													// Filter touch response
 #define TOUCH_THRESHOLD	700													// Y*(Z2/(Z1+1))
 #define MAX_CAL_ERROR	15													// Max difference at calibration moment
-#define	swap(a, b)		{int16_t t = a ; a = b; b = t; }
+#define	swap(a, b)		{uint16_t t = a ; a = b; b = t; }
 
 // definicje pinow
 #define		TOUCH_SCK	(1<<5)												// CLK
@@ -88,10 +88,10 @@
 
 typedef struct
 {
-	int16_t x_raw;															// X raw value
-	int16_t y_raw;															// Y raw value
-	int16_t x_cal;															// X calibrated
-	int16_t y_cal;															// Y calibrated
+	uint16_t x_raw;															// X raw value
+	uint16_t y_raw;															// Y raw value
+	uint16_t x_cal;															// X calibrated
+	uint16_t y_cal;															// Y calibrated
 	uint8_t z1;																// Pressure 1
 	uint8_t z2;																// Pressure 2
 	bool ok;																// Reading OK

@@ -236,8 +236,6 @@ void ILI9341_set_rotation(uint8_t orientation)
 /* Set current drawing coordinates */
 void ILI9341_set_xy(uint16_t x, uint16_t y)
 {
-    if ((x > tft_state.width) || (y > tft_state.height)) return;			// Nothing if out of the screen
-
     ILI9341_wr_cmd(ILI9341_COLUMN_ADDRESS_SET);
     ILI9341_wr_data(x >> 8);
     ILI9341_wr_data(x);
@@ -272,7 +270,9 @@ void ILI9341_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
 /* Draw single pixel at given coordinates with a color */
 void ILI9341_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
 {
-    ILI9341_set_xy(x, y);
+    if ((x > tft_state.width) || (y > tft_state.height)) return;			// Nothing if out of the screen
+
+	ILI9341_set_xy(x, y);
     ILI9341_push_color(color);
 }
 

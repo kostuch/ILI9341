@@ -31,7 +31,7 @@ int main(void)
     XPT2046_init_io();														// Inicjalizacja digitizera
     XPT2046_rd_ee_cal();													// Odczyt matrycy kalibracji
     ILI9341_set_rotation(LANDSCAPE);										// Landscape
-    touch_calibration();													// KALIBRACJA dotyku
+    //touch_calibration();													// KALIBRACJA dotyku
     ILI9341_cls(BLUE);														// Ekran na niebiesko
     ILI9341_set_font((font_t) {font16x16, 16, 16, YELLOW, BLUE});			// font 16x16 transparentny
     /*
@@ -146,15 +146,16 @@ void touch_calibration(void)
 
         do
         {
-            do
+            
+			do
             {
                 XPT2046_rd_touch();
             }
             while (!touch.ok);												// Wait for valid touch
-
+			
             sample_points[cal_step].x = touch.x_raw;						// Get X touch coordinates
             sample_points[cal_step].y = touch.y_raw;						// Get Y touch coordinates
-
+			
             if (labs(x - touch.x_raw) > MAX_CAL_ERROR || labs(y - touch.y_raw) > MAX_CAL_ERROR)
             {
                 ILI9341_set_font((font_t) {font16x16, 16, 16, RED, BLACK});
@@ -165,8 +166,9 @@ void touch_calibration(void)
                 ILI9341_set_font((font_t) {font16x16, 16, 16, GREEN, BLACK});
                 ILI9341_txt_P(0, 120, PGM_GETSTR(calibration_txt, cal_ok_idx));
             }
-
+			
             // DEBUG
+			/*
             ILI9341_txt(40, 20, "     ");
             ILI9341_txt(40, 20, itoa(touch.y_raw * (touch.z2 / (touch.z1 + 1)), driver_id_a, 10));
             ILI9341_txt(40, 40, "     ");
@@ -177,11 +179,10 @@ void touch_calibration(void)
             ILI9341_txt(40, 80, itoa(touch.x_raw, driver_id_a, 10));
             ILI9341_txt(40, 100, "     ");
             ILI9341_txt(40, 100, itoa(touch.y_raw, driver_id_a, 10));
+			*/
         }
         while (labs(x - touch.x_raw) > MAX_CAL_ERROR || labs(y - touch.y_raw) > MAX_CAL_ERROR);
 
-        ILI9341_set_font((font_t) {font16x16, 16, 16, YELLOW, BLACK});
-        ILI9341_txt_P(0, 120, PGM_GETSTR(calibration_txt, cal_next_idx));
         _delay_ms(500);
         ILI9341_draw_circle(x, y, 5, true, BLACK);							// Remove old calibration circle
         //  20,  20 ->  32,  31
@@ -197,5 +198,7 @@ void touch_calibration(void)
     }
 
     set_cal_matrix(sample_points);											// Create calibration matrix
-    XPT2046_wr_ee_cal();													// Store it in EEPROM
+    //XPT2046_wr_ee_cal();													// Store it in EEPROM
+	ILI9341_set_font((font_t) {font16x16, 16, 16, YELLOW, BLACK});
+	ILI9341_txt_P(0, 120, PGM_GETSTR(calibration_txt, cal_end_idx));
 }

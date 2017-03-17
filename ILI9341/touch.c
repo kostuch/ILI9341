@@ -64,7 +64,7 @@ static inline void XPT2046_deactivate(void)
 #if USE_TOUCH_CS == 1														// If TOUCH_CS in use
     TOUCH_CS_HI;
 #endif
-    SPCR &= ~(1 << SPR0);													// F_CPU/2
+    SPCR &= ~(1 << SPR1);													// F_CPU/2
 }
 
 static inline void XPT2046_wr_cmd(uint8_t tx)
@@ -151,7 +151,6 @@ void XPT2046_rd_touch(void)
 }
 
 /**********************************************************************
- *
  *     Function: set_cal_matrix()
  *
  *  Description: Calling this function with valid input data
@@ -218,7 +217,6 @@ void set_cal_matrix(point_t *sample_points)
 }
 
 /**********************************************************************
- *
  *     Function: getDisplayPoint()
  *
  *  Description: Given a valid set of calibration factors and a point
