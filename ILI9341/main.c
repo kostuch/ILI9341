@@ -21,11 +21,271 @@
 #include "touch.h"
 #include "literals.h"
 #include "globals.h"
+//#include <util/setbaud.h>
+
+// PETIT
+#include "diskio.h"
+#include "pff.h"
+#include "xitoa.h"
+#include "suart.h"
+#include "sd_card.h"
+
+/*
+void init_uart (void)														// Initialize UART
+{
+	// 9600,8,N,1
+	// Interrupt on receive
+	UCSR0B |= (1 << RXCIE0 | 1 << RXEN0 | 1 << TXEN0);
+	UCSR0C |= (1 << URSEL | 1 << UCSZ1 | 1 << UCSZ0);
+	UBRR0H = UBRRH_VALUE;
+	UBRR0L = UBRRL_VALUE;
+	#if USE_2X
+	UCSRA |= (1 << USE_2X);
+	#else
+	UCSRA &= ~(1 << USE_2X);
+	#endif
+}
+
+static inline void uart_putc(char data)
+{
+	while ( !( UCSRA & (1 << UDRE)) );
+
+	UDR = data;
+}
+
+ISR (USART_RXC_vect)														// Interrupt when received character from UART
+{
+	char rx_char;
+	rx_char = UDR;															// Read character
+	uart_putc(rx_char);														// Transmit it out (proxy)
+	parse_gpgga(rx_char);													// Process received character
+}
+
+static inline void uart_putstr(char *s)
+{
+	while (*s)
+	uart_putc(*s++);
+}
+*/
+
+/*---------------------------------------------------------*/
+/* Work Area                                               */
+/*---------------------------------------------------------*/
+
+char Line[128];		/* Console input buffer */
+
+static void put_rc (FRESULT rc)
+{
+	const char *p;
+	static const char PROGMEM str[]  =
+	"OK\0" "DISK_ERR\0" "NOT_READY\0" "NO_FILE\0" "NO_PATH\0"
+	"NOT_OPENED\0" "NOT_ENABLED\0" "NO_FILE_SYSTEM\0";
+	FRESULT i;
+
+	for (p = str, i = 0; i != rc && pgm_read_byte_near(p); i++) {
+		while(pgm_read_byte_near(p++));
+	}
+	xprintf(PSTR("rc=%u FR_%S\n"), (WORD)rc, p);
+}
+
+static void put_drc (BYTE res)
+{
+	xprintf(PSTR("rc=%d\n"), res);
+}
+
+static int get_line (char *buff, int len)
+{
+	BYTE c;
+	int i;
+
+	i = 0;
+	for (;;) {
+		c = rcvr();
+		if (c == '\r') break;
+		if ((c == '\b') && i) i--;
+		if ((c >= ' ') && (i < len - 1))
+		buff[i++] = c;
+	}
+	buff[i] = 0;
+	xmit('\n');
+
+	return i;
+}
+
+static void put_dump (const BYTE *buff, DWORD ofs, int cnt)
+{
+	BYTE n;
+
+
+	xitoa(ofs, 16, -8); xputc(' ');
+	for(n = 0; n < cnt; n++) {
+		xputc(' ');	xitoa(buff[n], 16, -2);
+	}
+	xputs(PSTR("  "));
+	for(n = 0; n < cnt; n++)
+	xputc(((buff[n] < 0x20)||(buff[n] >= 0x7F)) ? '.' : buff[n]);
+	xputc('\n');
+}
 
 void touch_calibration(void);
 char driver_id_a[16];
 
-int main(void)
+int main (void)
+{
+	ILI9341_init();															// Inicjalizacja LCD
+	XPT2046_init_io();														// Inicjalizacja digitizera
+	SDCARD_init_io();
+	ILI9341_set_rotation(LANDSCAPE);										// Landscape
+	//ILI9341_cls(BLUE);
+
+	char *ptr;
+	long p1, p2;
+	int n;
+	BYTE res;
+	UINT s1, s2, s3, ofs, cnt, bw;
+	FATFS fs;			/* File system object */
+	DIR dir;			/* Directory object */
+	FILINFO fno;		/* File information */
+
+	/* Initialize GPIO ports */
+	//PORTB = 0b101011;	/* u z H L H u */
+	//DDRB =  0b001110;
+
+	/* Join UART and xitoa module */
+	xfunc_out = xmit;
+	xputs(PSTR("\nPFF test monitor\n"));
+
+	for (;;) {
+		xputc('>');
+		get_line(Line, sizeof Line);
+		ptr = Line;
+		
+		switch (*ptr++) {
+
+			case 'd' :
+			switch (*ptr++) {
+				case 'i' :	/* di - Initialize physical drive */
+				res = disk_initialize();
+				put_drc(res);
+				break;
+
+				case 'd' :	/* dd <sector> <ofs> - Dump partial secrtor 128 bytes */
+				if (!xatoi(&ptr, &p1) || !xatoi(&ptr, &p2)) break;
+				s2 = p2;
+				res = disk_readp((BYTE*)Line, p1, s2, 128);
+				if (res) { put_drc(res); break; }
+				s3 = s2 + 128;
+				for (ptr = Line; s2 < s3; s2 += 16, ptr += 16, ofs += 16) {
+					s1 = (s3 - s2 >= 16) ? 16 : s3 - s2;
+					put_dump((BYTE*)ptr, s2, s1);
+				}
+				break;
+			}
+			break;
+
+			case 'f' :
+			switch (*ptr++) {
+
+				case 'i' :	/* fi - Mount the volume */
+				put_rc(pf_mount(&fs));
+				break;
+
+				case 'o' :	/* fo <file> - Open a file */
+				while (*ptr == ' ') ptr++;
+				put_rc(pf_open(ptr));
+				break;
+				#if _USE_READ
+				case 'd' :	/* fd - Read the file 128 bytes and dump it */
+				p2 = fs.fptr;
+				res = pf_read(Line, sizeof Line, &s1);
+				if (res != FR_OK) { put_rc(res); break; }
+				ptr = Line;
+				while (s1) {
+					s2 = (s1 >= 16) ? 16 : s1;
+					s1 -= s2;
+					put_dump((BYTE*)ptr, p2, s2);
+					ptr += 16; p2 += 16;
+				}
+				break;
+
+				case 't' :	/* ft - Type the file text (direct output) */
+				do {
+					res = pf_read(0, 32768, &s1);
+					if (res != FR_OK) { put_rc(res); break; }
+				} while (s1 == 32768);
+				break;
+				#endif
+				#if _USE_WRITE
+				case 'w' :	/* fw <len> <val> - Write data to the file */
+				if (!xatoi(&ptr, &p1) || !xatoi(&ptr, &p2)) break;
+				for (s1 = 0; s1 < sizeof Line; Line[s1++] = (BYTE)p2) ;
+				p2 = 0;
+				while (p1) {
+					if ((UINT)p1 >= sizeof Line) {
+						cnt = sizeof Line; p1 -= sizeof Line;
+						} else {
+						cnt = (WORD)p1; p1 = 0;
+					}
+					res = pf_write(Line, cnt, &bw);	/* Write data to the file */
+					p2 += bw;
+					if (res != FR_OK) { put_rc(res); break; }
+					if (cnt != bw) break;
+				}
+				res = pf_write(0, 0, &bw);		/* Finalize the write process */
+				put_rc(res);
+				if (res == FR_OK)
+				xprintf(PSTR("%lu bytes written.\n"), p2);
+				break;
+
+				case 'p' :	/* fp - Write console input to the file */
+				xputs(PSTR("Enter text to write. A blank line finalizes the write operation.\n"));
+				for (;;) {
+					n = get_line(Line, sizeof Line);
+					if (!n) break;
+					pf_write(Line, n, &bw);
+					pf_write("\r\n", 2, &bw);
+				}
+				res = pf_write(0, 0, &bw);			/* Finalize the write process */
+				put_rc(res);
+				break;
+				#endif
+				#if _USE_LSEEK
+				case 'e' :	/* fe - Move file pointer of the file */
+				if (!xatoi(&ptr, &p1)) break;
+				res = pf_lseek(p1);
+				put_rc(res);
+				if (res == FR_OK)
+				xprintf(PSTR("fptr = %lu(0x%lX)\n"), fs.fptr, fs.fptr);
+				break;
+				#endif
+				#if _USE_DIR
+				case 'l' :	/* fl [<path>] - Directory listing */
+				while (*ptr == ' ') ptr++;
+				res = pf_opendir(&dir, ptr);
+				if (res) { put_rc(res); break; }
+				s1 = 0;
+				for(;;) {
+					res = pf_readdir(&dir, &fno);
+					if (res != FR_OK) { put_rc(res); break; }
+					if (!fno.fname[0]) break;
+					if (fno.fattrib & AM_DIR)
+					xprintf(PSTR("   <DIR>   %s\n"), fno.fname);
+					else
+					xprintf(PSTR("%9lu  %s\n"), fno.fsize, fno.fname);
+					s1++;
+				}
+				xprintf(PSTR("%u item(s)\n"), s1);
+				break;
+				#endif
+			}
+			break;
+		}
+	}
+
+}
+
+
+int main_lcd_touch(void)
 {
     ILI9341_init();															// Inicjalizacja LCD
     XPT2046_init_io();														// Inicjalizacja digitizera
@@ -146,15 +406,16 @@ void touch_calibration(void)
 
         do
         {
-            do
+            
+			do
             {
                 XPT2046_rd_touch();
             }
             while (!touch.ok);												// Wait for valid touch
-
+			
             sample_points[cal_step].x = touch.x_raw;						// Get X touch coordinates
             sample_points[cal_step].y = touch.y_raw;						// Get Y touch coordinates
-
+			
             if (labs(x - touch.x_raw) > MAX_CAL_ERROR || labs(y - touch.y_raw) > MAX_CAL_ERROR)
             {
                 ILI9341_set_font((font_t) {font16x16, 16, 16, RED, BLACK});
@@ -165,9 +426,9 @@ void touch_calibration(void)
                 ILI9341_set_font((font_t) {font16x16, 16, 16, GREEN, BLACK});
                 ILI9341_txt_P(0, 120, PGM_GETSTR(calibration_txt, cal_ok_idx));
             }
-
+			
             // DEBUG
-            /*
+			/*
             ILI9341_txt(40, 20, "     ");
             ILI9341_txt(40, 20, itoa(touch.y_raw * (touch.z2 / (touch.z1 + 1)), driver_id_a, 10));
             ILI9341_txt(40, 40, "     ");
@@ -178,7 +439,7 @@ void touch_calibration(void)
             ILI9341_txt(40, 80, itoa(touch.x_raw, driver_id_a, 10));
             ILI9341_txt(40, 100, "     ");
             ILI9341_txt(40, 100, itoa(touch.y_raw, driver_id_a, 10));
-            */
+			*/
         }
         while (labs(x - touch.x_raw) > MAX_CAL_ERROR || labs(y - touch.y_raw) > MAX_CAL_ERROR);
 
@@ -198,6 +459,6 @@ void touch_calibration(void)
 
     set_cal_matrix(sample_points);											// Create calibration matrix
     //XPT2046_wr_ee_cal();													// Store it in EEPROM
-    ILI9341_set_font((font_t) {font16x16, 16, 16, YELLOW, BLACK});
-    ILI9341_txt_P(0, 120, PGM_GETSTR(calibration_txt, cal_end_idx));
+	ILI9341_set_font((font_t) {font16x16, 16, 16, YELLOW, BLACK});
+	ILI9341_txt_P(0, 120, PGM_GETSTR(calibration_txt, cal_end_idx));
 }
