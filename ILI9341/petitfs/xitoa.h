@@ -23,7 +23,7 @@ void xputc(char chr);
 
 
 /*-----------------------------------------------------------------------------*/
-void xputs(const prog_char *string);
+void xputs(const char *string);
 
 /*  The string placed in the ROM is forwarded to xputc() directly.
 */

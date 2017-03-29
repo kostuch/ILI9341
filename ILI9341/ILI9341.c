@@ -19,7 +19,7 @@
 static uint8_t ILI9341_rd_cmd(uint8_t addr, uint8_t parameter);
 static void ILI9341_wr_cmd(uint8_t cmd);
 static void ILI9341_wr_data(uint8_t data);
-static inline void ILI9341_push_color(uint16_t color);
+
 //static uint16_t ILI9341_rd_data(void);
 
 /* Reset LCD */
@@ -277,7 +277,7 @@ void ILI9341_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
 }
 
 /* Write color to LCD (at current coordinates) */
-static inline void ILI9341_push_color(uint16_t color)
+void ILI9341_push_color(uint16_t color)
 {
     ILI9341_wr_data(color >> 8);
     ILI9341_wr_data(color);

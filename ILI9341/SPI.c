@@ -37,23 +37,28 @@ void SPI_write(uint8_t tx, enum dev_t device)
         switch (device)
         {
             case TFT:
-                TFT_SCK_LO;															// Clock LOW
+                TFT_SCK_LO;													// Clock LOW
 
-                if (tx & i) TFT_MOSI_HI;											// If bit=1, set line
-                else TFT_MOSI_LO;													// If bit=0, reset line
+                if (tx & i) TFT_MOSI_HI;									// If bit=1, set line
+                else TFT_MOSI_LO;											// If bit=0, reset line
 
-                TFT_SCK_HI;															// Clock HIGH
+                TFT_SCK_HI;													// Clock HIGH
                 break;
 
             case TOUCH:
-                TOUCH_SCK_LO;															// Clock LOW
+                TOUCH_SCK_LO;												// Clock LOW
 
-                if (tx & i) TOUCH_MOSI_HI;											// If bit=1, set line
-                else TOUCH_MOSI_LO;													// If bit=0, reset line
-                TOUCH_SCK_HI;															// Clock HIGH
+                if (tx & i) TOUCH_MOSI_HI;									// If bit=1, set line
+                else TOUCH_MOSI_LO;											// If bit=0, reset line
+                TOUCH_SCK_HI;												// Clock HIGH
                 break;
 
             case SDCARD:
+                SD_SCK_LO;													// Clock LOW
+
+                if (tx & i) SD_MOSI_HI;										// If bit=1, set line
+                else SD_MOSI_LO;											// If bit=0, reset line
+                SD_SCK_HI;													// Clock HIGH
                 break;
         }
     }
@@ -92,6 +97,11 @@ uint8_t SPI_rxtx(uint8_t tx, enum dev_t device)
                 break;
 
             case SDCARD:
+				SD_SCK_LO;													// Clock LOW
+				SD_SCK_HI;													// Clock HIGH
+				rx <<= 1;													// Shift bit
+
+				if (SD_MISO_PIN & SD_MISO) rx |= 0x01;					// If MISO set, then set bit
                 break;
         }
     }
