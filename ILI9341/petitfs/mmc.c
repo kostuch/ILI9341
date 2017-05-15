@@ -28,7 +28,7 @@ BYTE rcv_spi (void);														// Send a 0xFF to the MMC and get the received
 /* Simple wrapper */
 void xmit_spi(BYTE d)
 {
-    SPI_write(d, SDCARD);
+    SPI_rxtx(d, SDCARD);
 }
 
 /* Simple wrapper */

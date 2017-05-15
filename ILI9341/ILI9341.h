@@ -1,12 +1,9 @@
 /*
-* ILI9341.h
-*
-* Created: 2016-07-18 11:34:25
-* Author : kostuch@skeletondevices.com
-* Version: 0.2
-*/
+ * ILI9341.h
+ *
+ *  Author: kostuch@skeletondevices.com
+ */
 
-#include <avr/pgmspace.h>
 #include <stdbool.h>
 
 #ifndef ILI9341_H_
@@ -19,7 +16,7 @@
 #define		USE_HARD_SPI
 
 #ifdef		USE_HARD_SPI
-// definicje pinow (hard SPI)
+// PINs definitions (hardware SPI used here)
 #define		TFT_SCK		(1<<5)												// CLK
 #define 	TFT_MISO	(1<<4)												// MISO
 #define 	TFT_MOSI	(1<<3)												// MOSI
@@ -27,7 +24,7 @@
 #define 	TFT_DC		(1<<1)												// D/C
 #define 	TFT_CS		(1<<0)												// CS
 
-// definicje portow
+// PORTs definitions
 #define 	TFT_SCK_PORT	PORTB
 #define 	TFT_SCK_DIR		DDRB
 #define 	TFT_MOSI_PORT	PORTB
@@ -42,7 +39,7 @@
 #define 	TFT_MISO_DIR	DDRB
 
 #else
-// definicje pinow (soft SPI)
+// PINs definitions (software SPI)
 #define		TFT_SCK		(1<<5)												// CLK
 #define 	TFT_MISO	(1<<4)												// MISO
 #define 	TFT_MOSI	(1<<3)												// MOSI
@@ -50,7 +47,7 @@
 #define 	TFT_DC		(1<<0)												// D/C
 #define 	TFT_CS		(1<<7)												// CS
 
-// definicje portow
+// PORTs definitions
 #define 	TFT_SCK_PORT	PORTB
 #define 	TFT_SCK_DIR		DDRB
 #define 	TFT_MOSI_PORT	PORTB
@@ -66,7 +63,7 @@
 #define 	TFT_MISO_DIR	DDRB
 #endif
 
-// definicje makr
+// MACROs definitions
 #define 	TFT_SCK_LO	TFT_SCK_PORT &= ~TFT_SCK
 #define 	TFT_SCK_HI	TFT_SCK_PORT |= TFT_SCK
 #define 	TFT_MOSI_LO	TFT_MOSI_PORT &= ~TFT_MOSI
@@ -83,6 +80,7 @@
 enum direction_t {HORIZONTAL, VERTICAL, UP_SLOPE, DN_SLOPE};
 enum position_t {PORTRAIT = 0, LANDSCAPE = 1, PORTRAIT_REV = 2, LANDSCAPE_REV = 3};
 
+// TFT state (to be finished...)
 typedef struct
 {
 	uint16_t width;
@@ -91,6 +89,7 @@ typedef struct
 	uint8_t idle;
 } tft_t;
 
+// Font description
 typedef struct
 {
     const uint8_t *font;
@@ -111,8 +110,8 @@ void ILI9341_select(void);
 void ILI9341_deselect(void);
 uint16_t rgb_color565(uint8_t r, uint8_t g, uint8_t b);
 uint8_t rgb_color8(uint8_t r, uint8_t g, uint8_t b);
-uint16_t ILI9341_rd_ram(void);
-//uint8_t ILI9341_rd_reg(uint8_t addr, uint8_t parameter);
+uint16_t ILI9341_rd_ram(uint16_t x, uint16_t y);
+void ILI9341_rd_dummy(void);
 uint32_t ILI9341_rd_id(void);
 void ILI9341_push_color(uint16_t color);
 void ILI9341_set_8colors(void);

@@ -1,9 +1,7 @@
 ﻿/*
  * ILI9341.c
  *
- * Created: 2016-07-18 11:35:33
  *  Author: kostuch@skeletondevices.com
- *  Version: 0.2
  */
 
 #include <avr/io.h>
@@ -17,10 +15,8 @@
 
 
 static uint8_t ILI9341_rd_cmd(uint8_t addr, uint8_t parameter);
+static uint8_t ILI9341_xchg_data(uint8_t data);
 static void ILI9341_wr_cmd(uint8_t cmd);
-static void ILI9341_wr_data(uint8_t data);
-
-//static uint16_t ILI9341_rd_data(void);
 
 /* Reset LCD */
 void ILI9341_reset()
@@ -71,42 +67,25 @@ static void ILI9341_wr_cmd(uint8_t command)
 #if USE_TFT_CS == 1															// If TFT_CS in use
     TFT_CS_LO;
 #endif
-    SPI_write(command, TFT);												// Send byte via SPI
+    SPI_rxtx(command, TFT);													// Send (exchange) byte via SPI
 #if USE_TFT_CS == 1															// If TFT_CS in use
     TFT_CS_HI;
 #endif
 }
 
-/* Write data */
-static void ILI9341_wr_data(uint8_t data)
+/* Exchange data */
+static uint8_t ILI9341_xchg_data(uint8_t data)
 {
-    TFT_DC_HI;																// TFT_DC HIGH - data
-#if USE_TFT_CS == 1															// If TFT_CS in use
-    TFT_CS_LO;
-#endif
-    SPI_write(data, TFT);														// Send byte via SPI
-#if USE_TFT_CS == 1															// If TFT_CS in use
-    TFT_CS_HI;
-#endif
-}
-
-/* Read command */
-static uint8_t ILI9341_rd_cmd(uint8_t addr, uint8_t parameter)
-{
-    TFT_DC_LO;																// TFT_DC LOW - command
-#if USE_TFT_CS == 1															// If TFT_CS in use
-    TFT_CS_LO;
-#endif
-    SPI_write(0xD9, TFT);													// Magic command
-    TFT_DC_HI;
-    SPI_write(0x10 + parameter, TFT);										// Magic data
-    TFT_DC_LO;
-    SPI_write(addr, TFT);
-    uint8_t data = SPI_rxtx(0, TFT);										// Send dummy byte and receive answer
-#if USE_TFT_CS == 1															// If TFT_CS in use
-    TFT_CS_HI;
-#endif
-    return data;
+	uint8_t rx_data;
+	TFT_DC_HI;																// TFT_DC HIGH - data
+	#if USE_TFT_CS == 1														// If TFT_CS in use
+	TFT_CS_LO;
+	#endif
+	rx_data = SPI_rxtx(data, TFT);											// Receive (and send) byte via SPI
+	#if USE_TFT_CS == 1														// If TFT_CS in use
+	TFT_CS_HI;
+	#endif
+	return rx_data;
 }
 
 /* Initialisation */
@@ -117,53 +96,72 @@ void ILI9341_init()
     _delay_ms(50);
     TFT_RST_HI;
     _delay_ms(50);
-    ILI9341_wr_cmd(ILI9341_SLEEP_OUT);									//sleep out
-    ILI9341_wr_cmd(ILI9341_POWER_CONTROL_B);							//power control b
-    ILI9341_wr_data(0x00);
-    ILI9341_wr_data(0x83);
-    ILI9341_wr_data(0x30);
-    ILI9341_wr_cmd(ILI9341_SOMETHING);									//power on seq control
-    ILI9341_wr_data(0x64);
-    ILI9341_wr_data(0x03);
-    ILI9341_wr_data(0x12);
-    ILI9341_wr_data(0x81);
-    ILI9341_wr_cmd(ILI9341_DRIVER_TIMING_CONTROL_A);					//timing control a
-    ILI9341_wr_data(0x85);
-    ILI9341_wr_data(0x01);
-    ILI9341_wr_data(0x79);
-    ILI9341_wr_cmd(ILI9341_POWER_ON_SEQ_CONTROL);						//power control a
-    ILI9341_wr_data(0x39);
-    ILI9341_wr_data(0X2C);
-    ILI9341_wr_data(0x00);
-    ILI9341_wr_data(0x34);
-    ILI9341_wr_data(0x02);
-    ILI9341_wr_cmd(ILI9341_PUMP_RATIO_CONTROL);							//pump ratio control
-    ILI9341_wr_data(0x20);
-    ILI9341_wr_cmd(ILI9341_DRIVER_TIMING_CONTROL_B);					//timing control b
-    ILI9341_wr_data(0x00);
-    ILI9341_wr_data(0x00);
-    ILI9341_wr_cmd(ILI9341_POWER_CONTROL_1);							//power control 1
-    ILI9341_wr_data(0x26);
-    ILI9341_wr_cmd(ILI9341_POWER_CONTROL_2);							//power control 2
-    ILI9341_wr_data(0x11);
-    ILI9341_wr_cmd(ILI9341_VCOM_CONTROL_1);								//vcom control 1
-    ILI9341_wr_data(0x35);
-    ILI9341_wr_data(0x3E);
-    ILI9341_wr_cmd(ILI9341_VCOM_CONTROL_2);								//vcom control 2
-    ILI9341_wr_data(0xBE);
-    ILI9341_wr_cmd(ILI9341_FRAME_RATE_CONTROL_NORMAL);					//frame control
-    ILI9341_wr_data(0x00);
-    ILI9341_wr_data(0x1B);
-    ILI9341_wr_cmd(ILI9341_DISPLAY_FUNCTION_CONTROL);					//display control
-    ILI9341_wr_data(0x0A);
-    ILI9341_wr_data(0x82);
-    ILI9341_wr_data(0x27);
-    ILI9341_wr_data(0x00);
-    ILI9341_wr_cmd(ILI9341_ENTRY_MODE_SET);								//emtry mode
-    ILI9341_wr_data(0x07);
-    ILI9341_wr_cmd(ILI9341_COLMOD_PIXEL_FORMAT_SET);					//pixel format
-    ILI9341_wr_data(0x55); //16bit
-    ILI9341_wr_cmd(ILI9341_DISPLAY_ON);									//display on
+    ILI9341_wr_cmd(ILI9341_SLEEP_OUT);										//sleep out
+    ILI9341_wr_cmd(ILI9341_POWER_CONTROL_B);								//power control b
+    ILI9341_xchg_data(0x00);
+    ILI9341_xchg_data(0x83);
+    ILI9341_xchg_data(0x30);
+    ILI9341_wr_cmd(ILI9341_SOMETHING);										//power on seq control
+    ILI9341_xchg_data(0x64);
+    ILI9341_xchg_data(0x03);
+    ILI9341_xchg_data(0x12);
+    ILI9341_xchg_data(0x81);
+    ILI9341_wr_cmd(ILI9341_DRIVER_TIMING_CONTROL_A);						//timing control a
+    ILI9341_xchg_data(0x85);
+    ILI9341_xchg_data(0x01);
+    ILI9341_xchg_data(0x79);
+    ILI9341_wr_cmd(ILI9341_POWER_ON_SEQ_CONTROL);							//power control a
+    ILI9341_xchg_data(0x39);
+    ILI9341_xchg_data(0X2C);
+    ILI9341_xchg_data(0x00);
+    ILI9341_xchg_data(0x34);
+    ILI9341_xchg_data(0x02);
+    ILI9341_wr_cmd(ILI9341_PUMP_RATIO_CONTROL);								//pump ratio control
+    ILI9341_xchg_data(0x20);
+    ILI9341_wr_cmd(ILI9341_DRIVER_TIMING_CONTROL_B);						//timing control b
+    ILI9341_xchg_data(0x00);
+    ILI9341_xchg_data(0x00);
+    ILI9341_wr_cmd(ILI9341_POWER_CONTROL_1);								//power control 1
+    ILI9341_xchg_data(0x26);
+    ILI9341_wr_cmd(ILI9341_POWER_CONTROL_2);								//power control 2
+    ILI9341_xchg_data(0x11);
+    ILI9341_wr_cmd(ILI9341_VCOM_CONTROL_1);									//vcom control 1
+    ILI9341_xchg_data(0x35);
+    ILI9341_xchg_data(0x3E);
+    ILI9341_wr_cmd(ILI9341_VCOM_CONTROL_2);									//vcom control 2
+    ILI9341_xchg_data(0xBE);
+    ILI9341_wr_cmd(ILI9341_FRAME_RATE_CONTROL_NORMAL);						//frame control
+    ILI9341_xchg_data(0x00);
+    ILI9341_xchg_data(0x1B);
+    ILI9341_wr_cmd(ILI9341_DISPLAY_FUNCTION_CONTROL);						//display control
+    ILI9341_xchg_data(0x0A);
+    ILI9341_xchg_data(0x82);
+    ILI9341_xchg_data(0x27);
+    ILI9341_xchg_data(0x00);
+    ILI9341_wr_cmd(ILI9341_ENTRY_MODE_SET);									//emtry mode
+    ILI9341_xchg_data(0x07);
+    ILI9341_wr_cmd(ILI9341_COLMOD_PIXEL_FORMAT_SET);						//pixel format
+    ILI9341_xchg_data(0x55);
+    ILI9341_wr_cmd(ILI9341_DISPLAY_ON);										//display on
+}
+
+/* Read command */
+static uint8_t ILI9341_rd_cmd(uint8_t addr, uint8_t parameter)
+{
+	TFT_DC_LO;																// TFT_DC LOW - command
+	#if USE_TFT_CS == 1														// If TFT_CS in use
+	TFT_CS_LO;
+	#endif
+	SPI_rxtx(0xD9, TFT);													// Magic command
+	TFT_DC_HI;
+	SPI_rxtx(0x10 + parameter, TFT);										// Magic data
+	TFT_DC_LO;
+	SPI_rxtx(addr, TFT);
+	uint8_t data = SPI_rxtx(0, TFT);										// Send dummy byte and receive answer
+	#if USE_TFT_CS == 1														// If TFT_CS in use
+	TFT_CS_HI;
+	#endif
+	return data;
 }
 
 uint32_t ILI9341_rd_id(void)
@@ -180,16 +178,25 @@ uint32_t ILI9341_rd_id(void)
 }
 
 /* Read raw data from RAM in LCD */
-/*
-uint16_t ILI9341_rd_ram()
+uint16_t ILI9341_rd_ram(uint16_t x, uint16_t y)
 {
-    uint16_t data = ILI9341_rd_reg(ILI9341_RW_GRAM);
-    uint16_t output = data >> 11;											// B
-    output |= data & 0b0000011111100000;									// G
-    output |= data << 11;													// R
-    return output;
+    // THIS FUNCTION DO NOT WORK AS IT SHOULD!!! FIXME!!! TODO
+	uint16_t data;
+    ILI9341_wr_cmd(ILI9341_MEMORY_READ);
+	ILI9341_rd_dummy();
+	data = ILI9341_xchg_data(255);
+	data <<= 8;
+	data |= ILI9341_xchg_data(255);
+	return data;
 }
-*/
+
+void ILI9341_rd_dummy(void)
+{
+	volatile uint16_t data;
+	data = ILI9341_xchg_data(100);											// Dummy read
+	data <<= 8;
+	data |= ILI9341_xchg_data(100);											// Dummy read
+}
 
 /* Set display rotation
  * 0 - up
@@ -207,28 +214,28 @@ void ILI9341_set_rotation(uint8_t orientation)
             tft_state.width = TFT_HEIGHT;
             tft_state.height = TFT_WIDTH;
             ILI9341_wr_cmd(ILI9341_MEMORY_ACCESS_CONTROL);
-            ILI9341_wr_data(0x40 | 0x08);
+            ILI9341_xchg_data(0x40 | 0x08);
             break;
 
         case LANDSCAPE:														// right
             tft_state.width = TFT_WIDTH;
             tft_state.height = TFT_HEIGHT;
             ILI9341_wr_cmd(ILI9341_MEMORY_ACCESS_CONTROL);
-            ILI9341_wr_data(0x20 | 0x08);
+            ILI9341_xchg_data(0x20 | 0x08);
             break;
 
         case PORTRAIT_REV:													// down
             tft_state.width = TFT_HEIGHT;
             tft_state.height = TFT_WIDTH;
             ILI9341_wr_cmd(ILI9341_MEMORY_ACCESS_CONTROL);
-            ILI9341_wr_data(0x80 | 0x08);
+            ILI9341_xchg_data(0x80 | 0x08);
             break;
 
         case LANDSCAPE_REV:													//  left
             tft_state.width = TFT_WIDTH;
             tft_state.height = TFT_HEIGHT;
             ILI9341_wr_cmd(ILI9341_MEMORY_ACCESS_CONTROL);
-            ILI9341_wr_data(0x40 | 0x80 | 0x20 | 0x08);
+            ILI9341_xchg_data(0x40 | 0x80 | 0x20 | 0x08);
             break;
     }
 }
@@ -237,15 +244,15 @@ void ILI9341_set_rotation(uint8_t orientation)
 void ILI9341_set_xy(uint16_t x, uint16_t y)
 {
     ILI9341_wr_cmd(ILI9341_COLUMN_ADDRESS_SET);
-    ILI9341_wr_data(x >> 8);
-    ILI9341_wr_data(x);
-    ILI9341_wr_data(tft_state.width >> 8);
-    ILI9341_wr_data(tft_state.width);
+    ILI9341_xchg_data(x >> 8);
+    ILI9341_xchg_data(x);
+    ILI9341_xchg_data(tft_state.width >> 8);
+    ILI9341_xchg_data(tft_state.width);
     ILI9341_wr_cmd(ILI9341_PAGE_ADDRESS_SET);
-    ILI9341_wr_data(y >> 8);
-    ILI9341_wr_data(y);
-    ILI9341_wr_data(tft_state.height >> 8);
-    ILI9341_wr_data(tft_state.height);
+    ILI9341_xchg_data(y >> 8);
+    ILI9341_xchg_data(y);
+    ILI9341_xchg_data(tft_state.height >> 8);
+    ILI9341_xchg_data(tft_state.height);
     ILI9341_wr_cmd(ILI9341_MEMORY_WRITE);
 }
 
@@ -255,15 +262,15 @@ void ILI9341_set_window(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
     if ((x0 > tft_state.width) || (y0 > tft_state.height) || (x1 > tft_state.width) || (y1 > tft_state.height)) return;	// Nothing if out of the screen
 
     ILI9341_wr_cmd(ILI9341_COLUMN_ADDRESS_SET);
-    ILI9341_wr_data(x0 >> 8);
-    ILI9341_wr_data(x0);
-    ILI9341_wr_data(x1 >> 8);
-    ILI9341_wr_data(x1);
+    ILI9341_xchg_data(x0 >> 8);
+    ILI9341_xchg_data(x0);
+    ILI9341_xchg_data(x1 >> 8);
+    ILI9341_xchg_data(x1);
     ILI9341_wr_cmd(ILI9341_PAGE_ADDRESS_SET);
-    ILI9341_wr_data(y0 >> 8);
-    ILI9341_wr_data(y0);
-    ILI9341_wr_data(y1 >> 8);
-    ILI9341_wr_data(y1);
+    ILI9341_xchg_data(y0 >> 8);
+    ILI9341_xchg_data(y0);
+    ILI9341_xchg_data(y1 >> 8);
+    ILI9341_xchg_data(y1);
     ILI9341_wr_cmd(ILI9341_MEMORY_WRITE);
 }
 
@@ -279,8 +286,8 @@ void ILI9341_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
 /* Write color to LCD (at current coordinates) */
 void ILI9341_push_color(uint16_t color)
 {
-    ILI9341_wr_data(color >> 8);
-    ILI9341_wr_data(color);
+    ILI9341_xchg_data(color >> 8);
+    ILI9341_xchg_data(color);
 }
 
 /* 8 colors on display */
@@ -400,7 +407,7 @@ void ILI9341_cls(uint16_t color)
     }
 }
 
-/* Draw line on the display */
+/* Draw any line on the display */
 void ILI9341_draw_line(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color)
 {
     int16_t d, dx, dy, ai, bi;												// aux variables

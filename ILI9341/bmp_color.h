@@ -1,7 +1,14 @@
-﻿#ifndef BMP_COLOR_H_
+﻿/*
+ * bmp_color.h
+ *
+ *  Author: kostuch@skeletondevices.com
+ */
+
+#ifndef BMP_COLOR_H_
 #define BMP_COLOR_H_
 
-// szerokosc=32   wysokosc=32
+// width=32   height=32
+// Size in pixel is important when display pic!
 
 const uint16_t PROGMEM suzuki[]  = {
 	0x3FE3, 0x47E5, 0x3FE6, 0x47E7, 0x5789, 0x6F0C, 0x8650, 0x0080,

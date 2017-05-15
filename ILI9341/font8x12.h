@@ -1,3 +1,9 @@
+/*
+ * font8x12.h
+ *
+ *  Author: kostuch@skeletondevices.com
+ */
+
 #ifndef FONT8X12_H_
 #define FONT8X12_H_
 

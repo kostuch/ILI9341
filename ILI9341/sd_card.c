@@ -1,8 +1,7 @@
 /*
  * sd_card.c
  *
- * Created: 2017-03-20 15:16:03
- *  Author: potocki
+ *  Author: kostuch@skeletondevices.com
  */ 
 
  #include <avr/io.h>

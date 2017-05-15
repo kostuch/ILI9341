@@ -1,3 +1,9 @@
+/*
+ * font16x16.h
+ *
+ *  Author: kostuch@skeletondevices.com
+ */
+
 #ifndef FONT16X16_H_
 #define FONT16X16_H_
 

@@ -1,3 +1,9 @@
+/*
+ * bmp_mono.h
+ *
+ *  Author: kostuch@skeletondevices.com
+ */
+
 #ifndef BMP_MONO_H_
 #define BMP_MONO_H_
 

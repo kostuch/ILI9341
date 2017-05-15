@@ -1,5 +1,11 @@
-#ifndef FONTS5X7_H_
-#define FONTS5X7_H_
+/*
+ * font5x7.h
+ *
+ *  Author: kostuch@skeletondevices.com
+ */
+
+#ifndef FONT5X7_H_
+#define FONT5X7_H_
 
 const uint8_t PROGMEM font5x7[] = 
 {
@@ -100,4 +106,4 @@ const uint8_t PROGMEM font5x7[] =
 	0x02, 0x01, 0x02, 0x04, 0x02 // ~
 };
 
-#endif /* FONTS5X7_H_ */
+#endif /* FONT5X7_H_ */

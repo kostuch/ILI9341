@@ -1,8 +1,7 @@
 /*
  * literals.h
  *
- * Created: 2017-03-03 16:10:55
- *  Author: potocki
+ *  Author: kostuch@skeletondevices.com
  */ 
 
 

@@ -1,7 +1,6 @@
 ﻿/*
- * ILI9341.c
+ * main.c
  *
- * Created: 2017-02-07 10:15:12
  * Author : kostuch@skeletondevices.com
  */
 
@@ -12,7 +11,7 @@
 #include <stdlib.h>
 #include "ILI9341.h"
 #include "colors.h"
-#include "fonts5x7.h"
+#include "font5x7.h"
 #include "font8x8.h"
 #include "font8x12.h"
 #include "font16x16.h"
@@ -20,23 +19,24 @@
 #include "bmp_color.h"
 #include "touch.h"
 #include "literals.h"
-#include "globals.h"
 //#include "controls.h"
 
-// PETIT
+// PETITFS
 #include "diskio.h"
 #include "pff.h"
 #include "xitoa.h"
 #include "suart.h"
 #include "sd_card.h"
 
+#define PGM_GETSTR( str, idx ) (char *)pgm_read_word( &str[ idx ] )
 
 /*---------------------------------------------------------*/
-/* Work Area                                               */
+/* PetitFS stuff...                                        */
 /*---------------------------------------------------------*/
 
-char Line[64];		/* Console input buffer */
+//char Line[64];		/* Console input buffer */
 
+/*
 static void put_rc (FRESULT rc)
 {
 	const char *p;
@@ -52,12 +52,16 @@ static void put_rc (FRESULT rc)
 
 	xprintf(PSTR("rc=%u FR_%S\n"), (WORD)rc, p);
 }
+*/
 
+/*
 static void put_drc (BYTE res)
 {
 	xprintf(PSTR("rc=%d\n"), res);
 }
+*/
 
+/*
 static int get_line (char *buff, int len)
 {
 	BYTE c;
@@ -80,7 +84,9 @@ static int get_line (char *buff, int len)
 	xmit('\n');
 	return i;
 }
+*/
 
+/*
 static void put_dump (const BYTE *buff, DWORD ofs, int cnt)
 {
 	BYTE n;
@@ -98,59 +104,44 @@ static void put_dump (const BYTE *buff, DWORD ofs, int cnt)
 
 	xputc('\n');
 }
+*/
+
+/*---------------------------------------------------------*/
+/* PetitFS stuff ends here. Remove if not needed.          */
+/*---------------------------------------------------------*/
 
 void touch_calibration(void);
 void load_picture(const char *file_name, uint16_t x, uint16_t y);
-void save_picture(const char *file_name, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
+// Function save_picture() is not functional at this moment!
+//void save_picture(const char *file_name, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
 
 char driver_id_a[16];
 
 int main(void)
 {
-	
 	ILI9341_init();															// Inicjalizacja LCD
 	XPT2046_init_io();														// Inicjalizacja digitizera
 	SDCARD_init_io();														// Inicjalizacja pinow SD (tylko CS)
 	XPT2046_rd_ee_cal();													// Odczyt matrycy kalibracji
 	ILI9341_set_rotation(LANDSCAPE);										// Landscape
 	//touch_calibration();													// KALIBRACJA dotyku
+	// Kalibracja powinna byc wykonana _jednorazowo_ aby obliczyc
+	// dedykowane do konkretnego egzemplarza wyswietlacza wspolczynniki kalibracyjne
+	// ***DEMO*** ***DEMO*** ***DEMO*** ***DEMO*** ***DEMO*** ***DEMO***
 	ILI9341_cls(BLUE);														// Ekran na niebiesko
-	ILI9341_set_font((font_t) {font16x16, 16, 16, YELLOW, BLUE});			// font 16x16
-	xfunc_out = xmit;														// Join UART and xitoa module - DEBUG via UART
-	
-	load_picture("M.BIN", 0, 0);											// Zaladuj obrazek z karty SD
-	/*
+	ILI9341_set_font((font_t) {font16x16, 16, 16, YELLOW, BLUE});			// Aktualny font 16x16
 	ILI9341_txt(0, 0, "Screen ID:");
-	ILI9341_txt(160, 0, itoa(ILI9341_rd_id(), driver_id_a, 16));
-	*/
+	ILI9341_txt(160, 0, itoa(ILI9341_rd_id(), driver_id_a, 16));			// Pokaz ID wyswietlacza
+	//xfunc_out = xmit;														// Join UART and xitoa module - DEBUG PetitFS via UART
 
-	while (1)
-	{
-		XPT2046_rd_touch();
-		/*
-		ILI9341_txt(40, 60, "      ");
-		ILI9341_txt(40, 60, itoa(touch.z1, driver_id_a, 10));
-		ILI9341_txt(40, 80, "      ");
-		ILI9341_txt(40, 80, itoa(touch.z2, driver_id_a, 10));
-		ILI9341_txt(40, 100, "      ");
-		ILI9341_txt(40, 100, itoa((touch.y_raw * (touch.z2 / (touch.z1 + 1)), driver_id_a, 10));
+	// Odkomentuj ponizsze sekcje, aby zobaczyc cuda :-)
+	// Po odkomentowaniu wszystkiego moze zabraknac flash'a!
+	// Duze fonty i bitmapy zabieraja duzo pamieci.
 
-		_delay_ms(50);
-		*/
-
-		if (touch.ok)
-		{
-			ILI9341_draw_pixel(touch.x_cal, touch.y_cal, YELLOW);
-			ILI9341_draw_pixel(touch.x_cal - 1, touch.y_cal, YELLOW);
-			ILI9341_draw_pixel(touch.x_cal + 1, touch.y_cal, YELLOW);
-			ILI9341_draw_pixel(touch.x_cal, touch.y_cal - 1, YELLOW);
-			ILI9341_draw_pixel(touch.x_cal, touch.y_cal + 1, YELLOW);
-			//ILI9341_txt(40, 60, "      ");
-			//ILI9341_txt(40, 60, itoa(touch.x_cal, driver_id_a, 10));
-			//ILI9341_txt(40, 80, "      ");
-			//ILI9341_txt(40, 80, itoa(touch.y_cal, driver_id_a, 10));
-		}
-	}
+	//load_picture("M.BIN", 0, 0);											// Zaladuj obrazek z karty SD
+	// Na karcie SD powinien byc plik o podanej nazwie w wymiarach 320x240pix (albo mniej)
+	// w formacie binarnym
+	// Konwerter BMP->BIN http://elm-chan.org/fsw/bmp2bin.zip
 
 	/*
 	for (uint8_t i=0; i<100; i+=3)											// Zolta przerywana linia
@@ -159,10 +150,12 @@ int main(void)
 	}
 	_delay_ms(500);
 	*/
+
 	/*
-	ILI9341_draw_line(10, 10, 200, 100, RED);								// Swobodna linia
+	ILI9341_draw_line(10, 10, 200, 100, RED);								// Dowolna (w sensie nachylenia) czerwona linia
 	_delay_ms(500);
 	*/
+
 	/*
 	ILI9341_set_font((font_t) {font5x7, 5, 7, YELLOW, TRANSPARENT});		// font "systemowy" transparentny
 	ILI9341_txt(0, 0, "Tekst fontem systemowym");
@@ -173,10 +166,12 @@ int main(void)
 	ILI9341_set_font((font_t) {font16x16, 16, 16, RED, GREEN});				// font 16x16
 	ILI9341_txt(0, 70, "Tekst solid");
 	*/
+
 	//ILI9341_draw_mono_bmp(120, 100, 60, 60, gps_mono, WHITE, GRAYBLUE);		// Dwukolorowa bitmapa
 	//ILI9341_draw_mono_trans_bmp(120, 170, 60, 60, gps_mono, YELLOW);		// Przezroczysta bitmapa
 	//ILI9341_draw_circle(100, 100, 50, false, WHITE);						// Okrag
 	//ILI9341_draw_circle(200, 100, 50, true, GRAY);							// Kolo
+
 	/*
 	uint16_t kwadrat[4][2] =
 	{
@@ -186,10 +181,12 @@ int main(void)
 		{60, 160}
 	};
 	*/
+
 	//ILI9341_draw_polygon(*kwadrat, 3, RED, 1);								// Zamkniety kwadrat
 	//ILI9341_draw_triangle(0, 0, 250, 200, 100, 150, BLACK);					// Trojkat
 	//ILI9341_draw_rectangle(10, 10, 200, 200, MAGENTA);						// Prostokat
 	//ILI9341_draw_color_bmp(240, 200, 32, 32, suzuki);						// Bitmapa kolorowa
+
 	/*
 	ILI9341_negative();
 	_delay_ms(2000);
@@ -200,217 +197,31 @@ int main(void)
 	ILI9341_set_64kcolors();
 	_delay_ms(2000);
 	*/
+
 	/*
-	ILI9341_draw_fast_line(100, 100, 100, YELLOW, HORIZONTAL);
+	ILI9341_draw_fast_line(100, 100, 100, YELLOW, HORIZONTAL);				// Linie poziome, pionowe i skosne (szybkie!)
 	ILI9341_draw_fast_line(100, 100, 100, RED, VERTICAL);
 	ILI9341_draw_fast_line(100, 100, 100, BLACK, UP_SLOPE);
 	ILI9341_draw_fast_line(100, 100, 100, WHITE, DN_SLOPE);
 	_delay_ms(500);
 	*/
+
 	//ILI9341_draw_fast_rect(150, 110, 160, 120, false, MAGENTA);				// Szybki prostokat
 	//ILI9341_draw_fast_rect(0, 0, 320, 240, true, BLUE);						// Szybki wypelniony prostokat (CLS)
 	//ILI9341_draw_fast_rect(10, 20, 40, 50, true, YELLOW);					// Szybki wypelniony prostokat
 
-	while (1) ;
-}
-
-int main_pff (void)
-{
-	ILI9341_init();															// Inicjalizacja LCD
-	XPT2046_init_io();														// Inicjalizacja digitizera
-	SDCARD_init_io();														// Inicjalizacja pinow SD (tylko CS)
-	ILI9341_set_rotation(LANDSCAPE);										// Landscape
-	ILI9341_cls(BLUE);
-	char *ptr;
-	long p1, p2;
-	int n;
-	BYTE res;
-	UINT s1, s2, s3, ofs, cnt, bw;
-	FATFS fs;																// File system object
-	DIR dir;																// Directory object
-	FILINFO fno;															// File information
-	xfunc_out = xmit;														// Join UART and xitoa module
-	xputs(PSTR("\nPFF test monitor\n"));
-
-	for (;;)
+	while (1)
 	{
-		xputc('>');
-		get_line(Line, sizeof Line);
-		ptr = Line;
+		XPT2046_rd_touch();													// Odczyt wspolrzednych dotyku
+		// Pool at this moment. To be done via PENIRQ.
 
-		switch (*ptr++)
+		if (touch.ok)														// Jezeli dotyk ok, postaw kilka punktow
 		{
-			case 'd' :
-				switch (*ptr++)
-				{
-					case 'i' :												// di - Initialize physical drive
-						res = disk_initialize();
-						put_drc(res);
-						break;
-
-					case 'd' :												// dd <sector> <ofs> - Dump partial secrtor 128 bytes
-						if (!xatoi(&ptr, &p1) || !xatoi(&ptr, &p2)) break;
-
-						s2 = p2;
-						res = disk_readp((BYTE *)Line, p1, s2, 128);
-
-						if (res) { put_drc(res); break; }
-
-						s3 = s2 + 128;
-
-						for (ptr = Line; s2 < s3; s2 += 16, ptr += 16, ofs += 16)
-						{
-							s1 = (s3 - s2 >= 16) ? 16 : s3 - s2;
-							put_dump((BYTE *)ptr, s2, s1);
-						}
-
-						break;
-				}
-
-				break;
-
-			case 'f' :
-				switch (*ptr++)
-				{
-					case 'i' :												// fi - Mount the volume
-						put_rc(pf_mount(&fs));
-						break;
-
-					case 'o' :												// fo <file> - Open a file
-						while (*ptr == ' ') ptr++;
-
-						put_rc(pf_open(ptr));
-						break;
-#if _USE_READ
-
-					case 'd' :												// fd - Read the file 128 bytes and dump it
-						p2 = fs.fptr;
-						res = pf_read(Line, sizeof Line, &s1);
-
-						if (res != FR_OK) { put_rc(res); break; }
-
-						ptr = Line;
-
-						while (s1)
-						{
-							s2 = (s1 >= 16) ? 16 : s1;
-							s1 -= s2;
-							put_dump((BYTE *)ptr, p2, s2);
-							ptr += 16; p2 += 16;
-						}
-
-						break;
-
-					case 't' :												// ft - Type the file text (direct output)
-						do
-						{
-							res = pf_read(0, 32768, &s1);
-
-							if (res != FR_OK) { put_rc(res); break; }
-						}
-						while (s1 == 32768);
-
-						break;
-#endif
-#if _USE_WRITE
-
-					case 'w' :												// fw <len> <val> - Write data to the file
-						if (!xatoi(&ptr, &p1) || !xatoi(&ptr, &p2)) break;
-
-						for (s1 = 0; s1 < sizeof Line; Line[s1++] = (BYTE)p2) ;
-
-						p2 = 0;
-
-						while (p1)
-						{
-							if ((UINT)p1 >= sizeof Line)
-							{
-								cnt = sizeof Line; p1 -= sizeof Line;
-							}
-							else
-							{
-								cnt = (WORD)p1; p1 = 0;
-							}
-
-							res = pf_write(Line, cnt, &bw);					// Write data to the file
-							p2 += bw;
-
-							if (res != FR_OK) { put_rc(res); break; }
-
-							if (cnt != bw) break;
-						}
-
-						res = pf_write(0, 0, &bw);							// Finalize the write process
-						put_rc(res);
-
-						if (res == FR_OK)
-							xprintf(PSTR("%lu bytes written.\n"), p2);
-
-						break;
-
-					case 'p' :												// fp - Write console input to the file
-						xputs(PSTR("Enter text to write. A blank line finalizes the write operation.\n"));
-
-						for (;;)
-						{
-							n = get_line(Line, sizeof Line);
-
-							if (!n) break;
-
-							pf_write(Line, n, &bw);
-							pf_write("\r\n", 2, &bw);
-						}
-
-						res = pf_write(0, 0, &bw);							// Finalize the write process
-						put_rc(res);
-						break;
-#endif
-#if _USE_LSEEK
-
-					case 'e' :												// fe - Move file pointer of the file
-						if (!xatoi(&ptr, &p1)) break;
-
-						res = pf_lseek(p1);
-						put_rc(res);
-
-						if (res == FR_OK)
-							xprintf(PSTR("fptr = %lu(0x%lX)\n"), fs.fptr, fs.fptr);
-
-						break;
-#endif
-#if _USE_DIR
-
-					case 'l' :												// fl [<path>] - Directory listing
-						while (*ptr == ' ') ptr++;
-
-						res = pf_opendir(&dir, ptr);
-
-						if (res) { put_rc(res); break; }
-
-						s1 = 0;
-
-						for (;;)
-						{
-							res = pf_readdir(&dir, &fno);
-
-							if (res != FR_OK) { put_rc(res); break; }
-
-							if (!fno.fname[0]) break;
-
-							if (fno.fattrib & AM_DIR)
-								xprintf(PSTR("   <DIR>   %s\n"), fno.fname);
-							else
-								xprintf(PSTR("%9lu  %s\n"), fno.fsize, fno.fname);
-
-							s1++;
-						}
-
-						xprintf(PSTR("%u item(s)\n"), s1);
-						break;
-#endif
-				}
-
-				break;
+			ILI9341_draw_pixel(touch.x_cal, touch.y_cal, YELLOW);
+			ILI9341_draw_pixel(touch.x_cal - 1, touch.y_cal, YELLOW);
+			ILI9341_draw_pixel(touch.x_cal + 1, touch.y_cal, YELLOW);
+			ILI9341_draw_pixel(touch.x_cal, touch.y_cal - 1, YELLOW);
+			ILI9341_draw_pixel(touch.x_cal, touch.y_cal + 1, YELLOW);
 		}
 	}
 }
@@ -458,7 +269,7 @@ void touch_calibration(void)
 	}
 
 	set_cal_matrix(sample_points);											// Create calibration matrix
-	//XPT2046_wr_ee_cal();													// Store it in EEPROM
+	XPT2046_wr_ee_cal();													// Store it in EEPROM
 	ILI9341_set_font((font_t) {font16x16, 16, 16, YELLOW, BLACK});
 	ILI9341_txt_P(0, 120, PGM_GETSTR(calibration_txt, cal_end_idx));
 }
@@ -499,6 +310,7 @@ void load_picture(
 					{
 						ILI9341_push_color(buffer[pixel] + (buffer[pixel + 1] << 8));
 					}
+
 					sector++;
 				}
 				while (!(bytes_read % sizeof(buffer)));						// Repeat read until the end of the file
@@ -510,6 +322,7 @@ void load_picture(
 	else ILI9341_txt_P(0, 0, PSTR("SD init error!"));						// No card
 }
 
+/* Because I can not read TFT RAM, I can not save modified picture to SD
 void save_picture(
     const char *file_name,													// Filename on SD card
     uint16_t x0,															// X coordinate left-right
@@ -548,7 +361,7 @@ void save_picture(
 
 					for (uint16_t pixel = start_pos; pixel < (bytes_written % sizeof(buffer) ? bytes_written % sizeof(buffer) : sizeof(buffer)); pixel += 2)
 					{
-						uint16_t color = ILI9341_rd_ram();
+						uint16_t color = ILI9341_rd_block();
 						buffer[pixel] = color & 0xFF;
 						buffer[pixel + 1] = color >> 8;
 					}
@@ -565,3 +378,4 @@ void save_picture(
 	}
 	else ILI9341_txt_P(0, 0, PSTR("SD init error!"));						// No card
 }
+*/

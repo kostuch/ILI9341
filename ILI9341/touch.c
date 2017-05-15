@@ -1,8 +1,7 @@
 ﻿/*
  * touch.c
  *
- * Created: 2017-02-07 16:05:17
- *  Author: potocki
+ *  Author: kostuch@skeletondevices.com
  */
 
 #include <avr/io.h>
@@ -22,6 +21,7 @@ static inline uint8_t XPT2046_rd8(uint8_t control);
 
 cal_t ee_touch_cal EEMEM;
 
+// Calibration points on the (landscape) screen
 // ------------------------
 // | 1                    |
 // |                      |
@@ -53,7 +53,7 @@ void XPT2046_init_io(void)
 
 static inline void XPT2046_activate(void)
 {
-    SPCR |= (1 << SPR1);													// F_CPU/32
+    SPCR |= (1 << SPR1);													// F_CPU/32 (slow A/D conversion)
 #if USE_TOUCH_CS == 1														// If TOUCH_CS in use
     TOUCH_CS_LO;
 #endif
@@ -69,7 +69,7 @@ static inline void XPT2046_deactivate(void)
 
 static inline void XPT2046_wr_cmd(uint8_t tx)
 {
-    SPI_write(tx, TOUCH);
+    SPI_rxtx(tx, TOUCH);
 }
 
 static inline uint8_t XPT2046_rd_data(uint8_t tx)
@@ -239,94 +239,3 @@ void get_display_point(void)
     touch.y_cal = ((touch_cal.Dn * touch.x_raw) + (touch_cal.En * touch.y_raw) +
                    touch_cal.Fn) / touch_cal.divider;
 }
-
-/*
- AN-1021
- APPLICATION NOTE
-
- #define N    9                             // number of reference points for calibration
- algorithm
- signed short int ReferencePoint[N][2];      // ideal position of reference points
- signed short int SamplePoint[N][2];         // sampling position of reference points
- double KX1, KX2, KX3, KY1, KY2, KY3;        // coefficients for calibration algorithm
- void Do_Calibration(signed short int *Px, signed short int *Py) // do calibration for point
- (Px, Py) using the calculated coefficients
- {
-	 *Px=(signed short int)(KX1*(*Px)+KX2*(*Py)+KX3+0.5);
-	 *Py=(signed      short      int)(KY1*(*Px)+KY2*(*Py)+KY3+0.5);
- }
- int Get_Calibration_Coefficient()           // calculate the coefficients for calibration
- algorithm: KX1, KX2, KX3, KY1, KY2, KY3
- {
-	 int      i;
-	 int      Points=N;
-	 double      a[3],b[3],c[3],d[3],k;
-	 if(Points<3)
-	 {
-		 return      0;
-	 }
-	 else
-	 {
-		 if(Points==3)
-		 {
-			 for(i=0;      i<Points;      i++)
-			 {
-				 a[i]=(double)(SamplePoint[i][0]);
-				 b[i]=(double)(SamplePoint[i][1]);
-				 c[i]=(double)(ReferencePoint[i][0]);
-				 d[i]=(double)(ReferencePoint[i][1]);
-			 }
-		 }
-		 else      if(Points>3)
-		 {
-			 for(i=0;      i<3;      i++)
-			 {
-				 a[i]=0;
-				 b[i]=0;
-				 c[i]=0;
-				 d[i]=0;
-			 }
-			 for(i=0;      i<Points;      i++)
-			 AN-1021
-			 Application Note
-			 Rev. 0 | Page 10 of 12
-			 {
-				 a[2]=a[2]+(double)(SamplePoint[i][0]);
-				 b[2]=b[2]+(double)(SamplePoint[i][1]);
-				 c[2]=c[2]+(double)(ReferencePoint[i][0]);
-				 d[2]=d[2]+(double)(ReferencePoint[i][1]);
-				 a[0]=a[0]+(double)(SamplePoint[i][0])*(double)(SamplePoint[i][0]);
-				 a[1]=a[1]+(double)(SamplePoint[i][0])*(double)(SamplePoint[i][1]);
-				 b[0]=a[1];
-				 b[1]=b[1]+(double)(SamplePoint[i][1])*(double)(SamplePoint[i][1]);
-				 c[0]=c[0]+(double)(SamplePoint[i][0])*(double)(ReferencePoint[i][0]);
-				 c[1]=c[1]+(double)(SamplePoint[i][1])*(double)(ReferencePoint[i][0]);
-				 d[0]=d[0]+(double)(SamplePoint[i][0])*(double)(ReferencePoint[i][1]);
-				 d[1]=d[1]+(double)(SamplePoint[i][1])*(double)(ReferencePoint[i][1]);
-			 }
-			 a[0]=a[0]/a[2];
-			 a[1]=a[1]/b[2];
-			 b[0]=b[0]/a[2];
-			 b[1]=b[1]/b[2];
-			 c[0]=c[0]/a[2];
-			 c[1]=c[1]/b[2];
-			 d[0]=d[0]/a[2];
-			 d[1]=d[1]/b[2];
-			 a[2]=a[2]/Points;
-			 b[2]=b[2]/Points;
-			 c[2]=c[2]/Points;
-			 d[2]=d[2]/Points;
-		 }
-		 k=(a[0]-a[2])*(b[1]-b[2])-(a[1]-a[2])*(b[0]-b[2]);
-		 KX1=((c[0]-c[2])*(b[1]-b[2])-(c[1]-c[2])*(b[0]-b[2]))/k;
-		 KX2=((c[1]-c[2])*(a[0]-a[2])-(c[0]-c[2])*(a[1]-a[2]))/k;
-		 KX3=(b[0]*(a[2]*c[1]-a[1]*c[2])+b[1]*(a[0]*c[2]-a[2]*c[0])+b[2]*(a[1]*c[0]-
-		 a[0]*c[1]))/k;
-		 KY1=((d[0]-d[2])*(b[1]-b[2])-(d[1]-d[2])*(b[0]-b[2]))/k;
-		 KY2=((d[1]-d[2])*(a[0]-a[2])-(d[0]-d[2])*(a[1]-a[2]))/k;
-		 KY3=(b[0]*(a[2]*d[1]-a[1]*d[2])+b[1]*(a[0]*d[2]-a[2]*d[0])+b[2]*(a[1]*d[0]-
-		 a[0]*d[1]))/k;
-		 return      Points;
-	 }
- }
- */
