@@ -12,14 +12,14 @@
 #include "ILI9341.h"
 #include "colors.h"
 #include "font5x7.h"
-#include "font8x8.h"
+//#include "font8x8.h" - included in controls.h
 #include "font8x12.h"
 #include "font16x16.h"
 #include "bmp_mono.h"
 #include "bmp_color.h"
 #include "touch.h"
 #include "literals.h"
-//#include "controls.h"
+#include "controls.h"
 
 // PETITFS
 #include "diskio.h"

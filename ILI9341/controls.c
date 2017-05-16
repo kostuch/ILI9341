@@ -8,42 +8,71 @@
 #include <avr/pgmspace.h>
 #include "controls.h"
 #include "colors.h"
+#include "ILI9341.h"
+#include "font8x8.h"
 
-button_t buttons[] =
+const button_t buttons[] PROGMEM =
 {
-{0, 0, 160, 20, true, GREEN, LIGHTGREEN, BLACK, "Load file", button_load},
-{159, 0, 160, 20, true, GREEN, LIGHTGREEN, BLACK, "Save file", button_save}
+	{0, 0, 160, 20, GREEN, LIGHTGREEN, BLACK, "Load file", btn_load},
+	{159, 0, 160, 20, GREEN, LIGHTGREEN, BLACK, "Save file", btn_save},
+	{40, 0, 160, 20, GREEN, LIGHTGREEN, BLACK, "Calibration", btn_calibrate_tft}
 };
 
-void draw_buttons(void)
+void draw_button(enum buttons btn)
 {
-	for (uint8_t i = 0; i < sizeof(buttons); i++)
+	uint16_t x, y, w, h;
+	x = buttons[btn].x;
+	y = buttons[btn].y;
+	w = buttons[btn].width;
+	h = buttons[btn].height;
+
+	//if (buttons[btn].enabled)
 	{
-		// Draw all defined buttons here (as not clicked) TODO
+		ILI9341_draw_fast_rect(x, y, w, h, true, buttons[btn].idle_color);
 	}
+	//else
+	{
+		ILI9341_draw_fast_rect(x, y, w, h, false, buttons[btn].idle_color);
+	}
+
+	ILI9341_set_font((font_t) {font8x8, 8, 8, buttons[btn].text_color, TRANSPARENT});
+	ILI9341_txt_P(x, y, buttons[btn].text);
 }
 
 void button_press(uint16_t x_click, uint16_t y_click)
 {
 	uint8_t i = 0;
-	do 
+
+	do
 	{
-		if ((buttons[i].x < x_click) & (buttons[i].y < y_click))			// Clicked button? FIXME!
+		if ((buttons[i].x < x_click) & (buttons[i].y < y_click) &
+		    (buttons[i].x + buttons[i].width > x_click) &
+		    (buttons[i].y + buttons[i].height > y_click))					// Clicked button?
 		{
+			//if (buttons[i].enabled)
+			{
 			// Draw button in active color TODO
 			buttons[i].button_func();										// Run associated function
-			return;
+			}
+			break;
 		}
-	} while (i < sizeof(buttons));
+	}
+	while (i < sizeof(buttons));
 }
 
-void button_load(void)
+void btn_load(void)
 {
 	// TODO
 	;
 }
 
-void button_save(void)
+void btn_save(void)
+{
+	// TODO
+	;
+}
+
+void btn_calibrate_tft(void)
 {
 	// TODO
 	;
