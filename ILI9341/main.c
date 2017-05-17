@@ -22,10 +22,10 @@
 #include "controls.h"
 
 // PETITFS
-#include "diskio.h"
-#include "pff.h"
-#include "xitoa.h"
-#include "suart.h"
+#include "petitfs/diskio.h"
+#include "petitfs/pff.h"
+#include "petitfs/xitoa.h"
+#include "petitfs/suart.h"
 #include "sd_card.h"
 
 #define PGM_GETSTR( str, idx ) (char *)pgm_read_word( &str[ idx ] )
