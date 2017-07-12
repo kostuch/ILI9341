@@ -21,9 +21,11 @@ static void ILI9341_wr_cmd(uint8_t cmd);
 /* Reset LCD */
 void ILI9341_reset()
 {
+#ifdef USE_TFT_RS
     TFT_RST_LO;																// 10ms reset pulse (if in use)
     _delay_ms(10);
     TFT_RST_HI;
+#endif
 }
 
 /* Activate via ChipSelect signal */
@@ -52,8 +54,6 @@ static void ILI9341_init_io()
     TFT_CS_DIR |= TFT_CS;
     TFT_CS_PORT |= TFT_CS;
 #endif
-    TFT_RST_DIR |= TFT_RST;													// TFT_RST pin as output
-    TFT_RST_PORT |= TFT_RST;												// Hi state
 #ifdef USE_HARD_SPI
     SPI_init();
 #else
@@ -76,26 +76,28 @@ static void ILI9341_wr_cmd(uint8_t command)
 /* Exchange data */
 static uint8_t ILI9341_xchg_data(uint8_t data)
 {
-	uint8_t rx_data;
-	TFT_DC_HI;																// TFT_DC HIGH - data
-	#if USE_TFT_CS == 1														// If TFT_CS in use
-	TFT_CS_LO;
-	#endif
-	rx_data = SPI_rxtx(data, TFT);											// Receive (and send) byte via SPI
-	#if USE_TFT_CS == 1														// If TFT_CS in use
-	TFT_CS_HI;
-	#endif
-	return rx_data;
+    uint8_t rx_data;
+    TFT_DC_HI;																// TFT_DC HIGH - data
+#if USE_TFT_CS == 1														// If TFT_CS in use
+    TFT_CS_LO;
+#endif
+    rx_data = SPI_rxtx(data, TFT);											// Receive (and send) byte via SPI
+#if USE_TFT_CS == 1														// If TFT_CS in use
+    TFT_CS_HI;
+#endif
+    return rx_data;
 }
 
 /* Initialisation */
 void ILI9341_init()
 {
     ILI9341_init_io();
+#ifdef USE_TFT_RS
     TFT_RST_LO;
     _delay_ms(50);
     TFT_RST_HI;
     _delay_ms(50);
+#endif
     ILI9341_wr_cmd(ILI9341_SLEEP_OUT);										//sleep out
     ILI9341_wr_cmd(ILI9341_POWER_CONTROL_B);								//power control b
     ILI9341_xchg_data(0x00);
@@ -148,20 +150,20 @@ void ILI9341_init()
 /* Read command */
 static uint8_t ILI9341_rd_cmd(uint8_t addr, uint8_t parameter)
 {
-	TFT_DC_LO;																// TFT_DC LOW - command
-	#if USE_TFT_CS == 1														// If TFT_CS in use
-	TFT_CS_LO;
-	#endif
-	SPI_rxtx(0xD9, TFT);													// Magic command
-	TFT_DC_HI;
-	SPI_rxtx(0x10 + parameter, TFT);										// Magic data
-	TFT_DC_LO;
-	SPI_rxtx(addr, TFT);
-	uint8_t data = SPI_rxtx(0, TFT);										// Send dummy byte and receive answer
-	#if USE_TFT_CS == 1														// If TFT_CS in use
-	TFT_CS_HI;
-	#endif
-	return data;
+    TFT_DC_LO;																// TFT_DC LOW - command
+#if USE_TFT_CS == 1														// If TFT_CS in use
+    TFT_CS_LO;
+#endif
+    SPI_rxtx(0xD9, TFT);													// Magic command
+    TFT_DC_HI;
+    SPI_rxtx(0x10 + parameter, TFT);										// Magic data
+    TFT_DC_LO;
+    SPI_rxtx(addr, TFT);
+    uint8_t data = SPI_rxtx(0, TFT);										// Send dummy byte and receive answer
+#if USE_TFT_CS == 1														// If TFT_CS in use
+    TFT_CS_HI;
+#endif
+    return data;
 }
 
 uint32_t ILI9341_rd_id(void)
@@ -181,21 +183,21 @@ uint32_t ILI9341_rd_id(void)
 uint16_t ILI9341_rd_ram(uint16_t x, uint16_t y)
 {
     // THIS FUNCTION DO NOT WORK AS IT SHOULD!!! FIXME!!! TODO
-	uint16_t data;
+    uint16_t data;
     ILI9341_wr_cmd(ILI9341_MEMORY_READ);
-	ILI9341_rd_dummy();
-	data = ILI9341_xchg_data(255);
-	data <<= 8;
-	data |= ILI9341_xchg_data(255);
-	return data;
+    ILI9341_rd_dummy();
+    data = ILI9341_xchg_data(255);
+    data <<= 8;
+    data |= ILI9341_xchg_data(255);
+    return data;
 }
 
 void ILI9341_rd_dummy(void)
 {
-	volatile uint16_t data;
-	data = ILI9341_xchg_data(100);											// Dummy read
-	data <<= 8;
-	data |= ILI9341_xchg_data(100);											// Dummy read
+    volatile uint16_t data;
+    data = ILI9341_xchg_data(100);											// Dummy read
+    data <<= 8;
+    data |= ILI9341_xchg_data(100);											// Dummy read
 }
 
 /* Set display rotation
@@ -279,7 +281,7 @@ void ILI9341_draw_pixel(uint16_t x, uint16_t y, uint16_t color)
 {
     if ((x > tft_state.width) || (y > tft_state.height)) return;			// Nothing if out of the screen
 
-	ILI9341_set_xy(x, y);
+    ILI9341_set_xy(x, y);
     ILI9341_push_color(color);
 }
 

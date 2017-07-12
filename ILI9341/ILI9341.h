@@ -13,54 +13,63 @@
 #define		TFT_HEIGHT	240
 
 #define 	USE_TFT_CS	1
+//#define		USE_TFT_RS
 #define		USE_HARD_SPI
 
 #ifdef		USE_HARD_SPI
-// PINs definitions (hardware SPI used here)
-#define		TFT_SCK		(1<<5)												// CLK
-#define 	TFT_MISO	(1<<4)												// MISO
-#define 	TFT_MOSI	(1<<3)												// MOSI
-#define 	TFT_RST		(1<<2)												// TFT_RST
-#define 	TFT_DC		(1<<1)												// D/C
-#define 	TFT_CS		(1<<0)												// CS
+    // PINs definitions (hardware SPI used here)
+    #define		TFT_SCK		(1<<5)												// CLK
+    #define 	TFT_MISO	(1<<4)												// MISO
+    #define 	TFT_MOSI	(1<<3)												// MOSI
+    #ifdef USE_TFT_RS
+        #define 	TFT_RST		(1<<2)											// TFT_RST
+    #endif
+    #define 	TFT_DC		(1<<1)												// D/C
+    #define 	TFT_CS		(1<<0)												// CS
 
-// PORTs definitions
-#define 	TFT_SCK_PORT	PORTB
-#define 	TFT_SCK_DIR		DDRB
-#define 	TFT_MOSI_PORT	PORTB
-#define 	TFT_MOSI_DIR	DDRB
-#define 	TFT_RST_PORT	PORTB
-#define 	TFT_RST_DIR		DDRB
-#define 	TFT_DC_PORT		PORTB
-#define 	TFT_DC_DIR		DDRB
-#define 	TFT_CS_PORT		PORTB
-#define 	TFT_CS_DIR		DDRB
-#define 	TFT_MISO_PORT	PORTB
-#define 	TFT_MISO_DIR	DDRB
+    // PORTs definitions
+    #define 	TFT_SCK_PORT	PORTB
+    #define 	TFT_SCK_DIR		DDRB
+    #define 	TFT_MOSI_PORT	PORTB
+    #define 	TFT_MOSI_DIR	DDRB
+    #ifdef USE_TFT_RS
+        #define 	TFT_RST_PORT	PORTB
+        #define 	TFT_RST_DIR		DDRB
+    #endif
+    #define 	TFT_DC_PORT		PORTB
+    #define 	TFT_DC_DIR		DDRB
+    #define 	TFT_CS_PORT		PORTB
+    #define 	TFT_CS_DIR		DDRB
+    #define 	TFT_MISO_PORT	PORTB
+    #define 	TFT_MISO_DIR	DDRB
 
 #else
-// PINs definitions (software SPI)
-#define		TFT_SCK		(1<<5)												// CLK
-#define 	TFT_MISO	(1<<4)												// MISO
-#define 	TFT_MOSI	(1<<3)												// MOSI
-#define 	TFT_RST		(1<<2)												// TFT_RST
-#define 	TFT_DC		(1<<0)												// D/C
-#define 	TFT_CS		(1<<7)												// CS
+    // PINs definitions (software SPI)
+    #define		TFT_SCK		(1<<5)												// CLK
+    #define 	TFT_MISO	(1<<4)												// MISO
+    #define 	TFT_MOSI	(1<<3)												// MOSI
+    #ifdef USE_TFT_RS
+        #define 	TFT_RST		(1<<2)											// TFT_RST
+    #endif
+    #define 	TFT_DC		(1<<0)												// D/C
+    #define 	TFT_CS		(1<<7)												// CS
 
-// PORTs definitions
-#define 	TFT_SCK_PORT	PORTB
-#define 	TFT_SCK_DIR		DDRB
-#define 	TFT_MOSI_PORT	PORTB
-#define 	TFT_MOSI_DIR	DDRB
-#define 	TFT_RST_PORT	PORTB
-#define 	TFT_RST_DIR		DDRB
-#define 	TFT_DC_PORT		PORTB
-#define 	TFT_DC_DIR		DDRB
-#define 	TFT_CS_PORT		PORTD
-#define 	TFT_CS_DIR		DDRD
-#define 	TFT_MISO_PORT	PORTB
-#define 	TFT_MISO_PIN	PINB
-#define 	TFT_MISO_DIR	DDRB
+    // PORTs definitions
+    #define 	TFT_SCK_PORT	PORTB
+    #define 	TFT_SCK_DIR		DDRB
+    #define 	TFT_MOSI_PORT	PORTB
+    #define 	TFT_MOSI_DIR	DDRB
+    #ifdef USE_TFT_RS
+        #define 	TFT_RST_PORT	PORTB
+        #define 	TFT_RST_DIR		DDRB
+    #endif
+    #define 	TFT_DC_PORT		PORTB
+    #define 	TFT_DC_DIR		DDRB
+    #define 	TFT_CS_PORT		PORTD
+    #define 	TFT_CS_DIR		DDRD
+    #define 	TFT_MISO_PORT	PORTB
+    #define 	TFT_MISO_PIN	PINB
+    #define 	TFT_MISO_DIR	DDRB
 #endif
 
 // MACROs definitions
@@ -68,8 +77,10 @@
 #define 	TFT_SCK_HI	TFT_SCK_PORT |= TFT_SCK
 #define 	TFT_MOSI_LO	TFT_MOSI_PORT &= ~TFT_MOSI
 #define 	TFT_MOSI_HI	TFT_MOSI_PORT |= TFT_MOSI
-#define 	TFT_RST_LO	TFT_RST_PORT &= ~TFT_RST
-#define 	TFT_RST_HI	TFT_RST_PORT |= TFT_RST
+#ifdef USE_TFT_RS
+    #define 	TFT_RST_LO	TFT_RST_PORT &= ~TFT_RST
+    #define 	TFT_RST_HI	TFT_RST_PORT |= TFT_RST
+#endif
 #define 	TFT_DC_LO	TFT_DC_PORT &= ~TFT_DC
 #define 	TFT_DC_HI	TFT_DC_PORT |= TFT_DC
 #define 	TFT_CS_LO	TFT_CS_PORT &= ~TFT_CS
@@ -83,10 +94,10 @@ enum position_t {PORTRAIT = 0, LANDSCAPE = 1, PORTRAIT_REV = 2, LANDSCAPE_REV = 
 // TFT state (to be finished...)
 typedef struct
 {
-	uint16_t width;
-	uint16_t height;
-	uint8_t inversion;
-	uint8_t idle;
+    uint16_t width;
+    uint16_t height;
+    uint8_t inversion;
+    uint8_t idle;
 } tft_t;
 
 // Font description

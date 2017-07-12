@@ -11,6 +11,9 @@
 
 void SPI_init(void)
 {
+#ifdef USE_HARD_SPI
+    DDRB |= (1 << PINB2);													// Needed for hardware SPI (or TFT initialise fail)
+#endif
     PRR &= ~(1 << PRSPI);													// Enable SPI in Power Reduction Register
     SPCR = ((1 << SPE) |													// SPI Enable
             (0 << SPIE) |													// SPI Interupt not used
@@ -26,38 +29,42 @@ void SPI_init(void)
 uint8_t SPI_rxtx(uint8_t tx, enum dev_t device)
 {
 #ifdef USE_HARD_SPI
-	SPDR = tx;																// Dummy byte
+    SPDR = tx;																// Dummy byte
 
     while (!(SPSR & (1 << SPIF)));											// Wait for transmission complete
 
 #else
-	uint8_t rx;
+    uint8_t rx;
+
     for (uint8_t i = 0x80; i; i >>= 1)										// 8 bits (from MSB)
     {
         switch (device)
         {
             case TFT:
-				TFT_SCK_LO;													// Clock LOW
-				TFT_SCK_HI;													// Clock HIGH
-				rx <<= 1;													// Shift bit
+                TFT_SCK_LO;													// Clock LOW
+                TFT_SCK_HI;													// Clock HIGH
+                rx <<= 1;													// Shift bit
 
-				if (TFT_MISO_PIN & TFT_MISO) rx |= 0x01;					// If MISO set, then set bit
+                if (TFT_MISO_PIN & TFT_MISO) rx |= 0x01;					// If MISO set, then set bit
+
                 break;
 
             case TOUCH:
-				TOUCH_SCK_LO;												// Clock LOW
-				TOUCH_SCK_HI;												// Clock HIGH
-				rx <<= 1;													// Shift bit
+                TOUCH_SCK_LO;												// Clock LOW
+                TOUCH_SCK_HI;												// Clock HIGH
+                rx <<= 1;													// Shift bit
 
-				if (TOUCH_MISO_PIN & TOUCH_MISO) rx |= 0x01;				// If MISO set, then set bit
+                if (TOUCH_MISO_PIN & TOUCH_MISO) rx |= 0x01;				// If MISO set, then set bit
+
                 break;
 
             case SDCARD:
-				SD_SCK_LO;													// Clock LOW
-				SD_SCK_HI;													// Clock HIGH
-				rx <<= 1;													// Shift bit
+                SD_SCK_LO;													// Clock LOW
+                SD_SCK_HI;													// Clock HIGH
+                rx <<= 1;													// Shift bit
 
-				if (SD_MISO_PIN & SD_MISO) rx |= 0x01;						// If MISO set, then set bit
+                if (SD_MISO_PIN & SD_MISO) rx |= 0x01;						// If MISO set, then set bit
+
                 break;
         }
     }
